@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dark War - Port (2x2) & Tile Organizer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #e0e0e0; text-align: center; margin: 0; padding: 20px; }
+        #grid { 
+            display: grid; 
+            grid-template-columns: repeat(40, 20px); /* 40 kolonner af 20px */
+            grid-gap: 1px; 
+            background: #333; 
+            width: fit-content; 
+            margin: 20px auto;
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .cell { 
+            width: 20px; height: 20px; background: #262626; 
+            font-size: 7px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            overflow: hidden; border: 0.1px solid #333;
+            transition: background 0.2s;
+        }
+        .cell:hover { background: #404040; }
+        
+        /* Port Styling (2x2) */
+        .port-2x2 { background: #2980b9 !important; border: 1px solid #3498db; box-sizing: border-box; font-weight: bold; }
+        .tile-1x1 { background: #27ae60 !important; border: 1px solid #2ecc71; }
+        
+        .controls { 
+            margin-bottom: 20px; padding: 15px; background: #2d2d2d; 
+            position: sticky; top: 0; z-index: 100; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        button { 
+            padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; 
+            margin: 0 5px; font-weight: bold; transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+        .btn-port { background: #3498db; color: white; }
+        .btn-tile { background: #2ecc71; color: white; }
+        .btn-delete { background: #e74c3c; color: white; }
+        #status { margin-top: 10px; font-style: italic; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>Alliance Base Planner</h1>
+    
+    <div class="controls">
+        <button class="btn-port" onclick="setMode('port')">Placer Port (2x2)</button>
+        <button class="btn-tile" onclick="setMode('tile')">Placer Tile (1x1)</button>
+        <button class="btn-delete" onclick="setMode('delete')">Slet Felt</button>
+        <p id="status">Valgt mode: Tile (1x1)</p>
+    </div>
+
+    <div id="grid"></div>
+
+    <script>
+        let currentMode = 'tile';
+        const gridSize = 40; // 40x40 grid
+        const grid = document.getElementById('grid');
+
+        // Lav griddet
+        for (let i = 0; i < gridSize * gridSize; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.index = i;
+            cell.onclick = () => handleCellClick(i);
+            grid.appendChild(cell);
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            let text = "Tile (1x1)";
+            if(mode === 'port') text = "Port (2x2)";
+            if(mode === 'delete') text = "Slet-tilstand";
+            document.getElementById('status').innerText = "Valgt mode: " + text;
+        }
+
+        function handleCellClick(index) {
+            const cell = grid.children[index];
+            const row = Math.floor(index / gridSize);
+            const col = index % gridSize;
+
+            if (currentMode === 'delete') {
+                cell.innerText = "";
+                cell.className = "cell";
+                cell.style.background = "";
+                cell.style.borderColor = "";
+                return;
+            }
+
+            const name = prompt("Hvem skal ligge her?");
+            if (!name) return;
+
+            if (currentMode === 'tile') {
+                cell.innerText = name;
+                cell.className = 'cell tile-1x1';
+            } 
+            else if (currentMode === 'port') {
+                // Tjek om der er plads til en 2x2
+                if (row < gridSize - 1 && col < gridSize - 1) {
+                    const portColor = '#2980b9';
+                    // Farv de 4 felter (2x2)
+                    const offsets = [0, 1, gridSize, gridSize + 1];
+                    offsets.forEach((offset, i) => {
+                        const target = grid.children[index + offset];
+                        target.className = 'cell port-2x2';
+                        if (i === 0) target.innerText = name; // Skriv kun navnet i det første felt
+                    });
+                } else {
+                    alert("Der er ikke plads til en 2x2 Port her i kanten!");
+                }
+            }
+        }
+    </script>
+</body>
+</html>
