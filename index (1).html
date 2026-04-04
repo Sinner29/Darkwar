@@ -23,20 +23,34 @@
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, attributionControl: false });
+        // Opsætning af kortet
+        var map = L.map('map', { 
+            crs: L.CRS.Simple, 
+            minZoom: -2, 
+            maxZoom: 2, 
+            attributionControl: false 
+        });
+
+        // Her kobler vi koden til din map.jpg fil
         var bounds = [[0, 0], [1000, 1000]];
-        // Sørg for at du har uploadet en fil der hedder map.jpg til samme mappe!
         var image = L.imageOverlay('map.jpg', bounds).addTo(map);
         map.fitBounds(bounds);
 
+        // Marker funktion
         map.on('click', function(e) {
             var x = Math.round(e.latlng.lng);
             var y = Math.round(e.latlng.lat);
             document.getElementById('coords').innerHTML = "X: " + x + " | Y: " + y;
+            
             var note = prompt("Navn/Alliance:");
             if (note) {
-                L.circleMarker(e.latlng, { radius: 10, fillColor: "#f0c05a", color: "#000", weight: 2, fillOpacity: 0.9 })
-                .addTo(map).bindPopup("<b>" + note + "</b><br>X: " + x + " Y: " + y).openPopup();
+                L.circleMarker(e.latlng, { 
+                    radius: 10, 
+                    fillColor: "#f0c05a", 
+                    color: "#000", 
+                    weight: 2, 
+                    fillOpacity: 0.9 
+                }).addTo(map).bindPopup("<b>" + note + "</b><br>X: " + x + " Y: " + y).openPopup();
             }
         });
     </script>
