@@ -26,13 +26,13 @@
         // Opsætning af kortet
         var map = L.map('map', { 
             crs: L.CRS.Simple, 
-            minZoom: -3, 
-            maxZoom: 5, 
+            minZoom: -2, 
+            maxZoom: 4, 
             attributionControl: false 
         });
 
         // Her kobler vi koden til din map.jpg fil
-        var bounds = [[0, 0], [1080, 1920]];
+        var bounds = [[0, 0], [3476, 4152]];
         var image = L.imageOverlay('map.jpg', bounds).addTo(map);
         map.fitBounds(bounds);
 
