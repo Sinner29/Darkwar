@@ -1,151 +1,169 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dark War - Professional Planner</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark War - Professional Hive Planner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; margin: 0; padding: 10px; }
-        
-        .controls { 
-            margin-bottom: 15px; padding: 15px; background: #222; 
-            border-radius: 12px; position: sticky; top: 0; z-index: 100;
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
-        }
+        :root { --primary-bg: #1a1a1a; --header-bg: #2d2d2d; --accent: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--primary-bg); color: white; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
 
+        /* Top Bar */
+        .header { background: var(--header-bg); padding: 10px; border-bottom: 2px solid #444; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+        .row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        
+        .color-dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+        .color-dot.active { border-color: white; transform: scale(1.1); }
+        
+        input#nameInput { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 4px; flex-grow: 1; max-width: 150px; }
+        
+        button { background: #444; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        button:active { background: #666; }
+        .btn-add { background: var(--accent); }
+        .btn-tool { background: #4a90e2; }
+
+        /* Grid Container */
+        #viewport { flex-grow: 1; overflow: auto; position: relative; background: #111; padding: 20px; touch-action: pinch-zoom; }
         #grid { 
             display: grid; 
-            grid-template-columns: repeat(24, 1fr); 
+            grid-template-columns: repeat(24, 30px); 
+            grid-template-rows: repeat(24, 30px); 
             gap: 1px; 
             background: #333; 
-            width: 100%; 
-            max-width: 600px; 
-            margin: 0 auto;
-            border: 2px solid #444;
+            width: fit-content;
+            margin: auto;
         }
 
         .cell { 
-            aspect-ratio: 1 / 1; 
-            background: #1e1e1e; 
-            cursor: pointer; 
-            display: flex;
-            align-items: center; 
-            justify-content: center;
-            font-size: 9px;
-            font-weight: bold;
-            color: white;
-            position: relative;
+            width: 30px; height: 30px; background: #222; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 8px; font-weight: bold; text-align: center;
+            word-break: break-all; overflow: hidden; position: relative;
         }
 
-        /* Port Styles */
-        .port { position: absolute; width: 200%; height: 200%; z-index: 5; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: auto; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.2); }
-        .port-blue { background: #2980b9; }
-        .port-yellow { background: #f1c40f; color: black; }
-        .port-orange { background: #e67e22; }
-        
-        /* Tile Style */
-        .tile-blue { background: rgba(52, 152, 219, 0.4) !important; border: 1px solid #3498db; }
+        /* Elements */
+        .port-overlay { 
+            position: absolute; width: 61px; height: 61px; /* 2x2 plus gap */
+            z-index: 10; display: flex; align-items: center; justify-content: center;
+            padding: 2px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.3);
+            font-size: 10px; pointer-events: none;
+        }
+        .tile-overlay { width: 100%; height: 100%; opacity: 0.5; pointer-events: none; }
 
-        button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; }
-        .active { outline: 3px solid white; transform: scale(1.05); }
-        
-        .btn-blue { background: #2980b9; color: white; }
-        .btn-yellow { background: #f1c40f; color: black; }
-        .btn-orange { background: #e67e22; color: white; }
-        .btn-tile { background: rgba(52, 152, 219, 0.6); color: white; }
-        .btn-del { background: #c0392b; color: white; }
-
-        input { background: rgba(255,255,255,0.9); border: none; width: 80%; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <button id="p-blue" class="btn-blue active" onclick="setMode('port', '#2980b9', 'blue')">Port Blå</button>
-        <button id="p-yellow" class="btn-yellow" onclick="setMode('port', '#f1c40f', 'yellow')">Port Gul</button>
-        <button id="p-orange" class="btn-orange" onclick="setMode('port', '#e67e22', 'orange')">Port Orange</button>
-        <button id="p-tile" class="btn-tile" onclick="setMode('tile')">Blå Tile</button>
-        <button class="btn-del" onclick="setMode('delete')">Slet</button>
+    <div class="header">
+        <div class="row">
+            <div class="color-dot active" style="background: #2980b9;" onclick="selectColor('#2980b9', this)"></div>
+            <div class="color-dot" style="background: #f1c40f;" onclick="selectColor('#f1c40f', this)"></div>
+            <div class="color-dot" style="background: #e67e22;" onclick="selectColor('#e67e22', this)"></div>
+            <div class="color-dot" style="background: #2ecc71;" onclick="selectColor('#2ecc71', this)"></div>
+            <button onclick="undo()">↩️</button>
+            <button onclick="redo()">↪️</button>
+            <button style="background:#c0392b" onclick="setTool('delete')">🗑️</button>
+        </div>
+        <div class="row">
+            <select id="typeSelect" style="background:#333; color:white; padding:8px; border-radius:4px;">
+                <option value="port">Port (2x2)</option>
+                <option value="tile">Tile (1x1)</option>
+            </select>
+            <input type="text" id="nameInput" placeholder="Navn...">
+            <button class="btn-add" onclick="setTool('add')">✚ Add</button>
+        </div>
     </div>
 
-    <div id="grid"></div>
+    <div id="viewport">
+        <div id="grid"></div>
+    </div>
 
     <script>
-        let mode = 'port';
-        let currentColor = '#2980b9';
-        let colorName = 'blue';
+        let selectedColor = '#2980b9';
+        let currentTool = 'add';
+        let history = [];
+        let redoStack = [];
         const gridSize = 24;
 
+        // Init Grid
         const grid = document.getElementById('grid');
         for (let i = 0; i < gridSize * gridSize; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
-            cell.id = 'cell-' + i;
-            cell.onclick = (e) => handleInteraction(i);
+            cell.id = 'c-' + i;
+            cell.onclick = () => handleCellClick(i);
             grid.appendChild(cell);
         }
 
-        function setMode(newMode, color, cName) {
-            mode = newMode;
-            if(color) { currentColor = color; colorName = cName; }
-            document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
+        function selectColor(color, el) {
+            selectedColor = color;
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            el.classList.add('active');
+            setTool('add');
         }
 
-        function handleInteraction(index) {
-            const row = Math.floor(index / gridSize);
-            const col = index % gridSize;
-            const cell = document.getElementById('cell-' + index);
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelector('.btn-add').style.opacity = tool === 'add' ? '1' : '0.5';
+        }
 
-            if (mode === 'delete') {
-                if(cell.innerHTML.includes('port')) {
-                    // Hvis det er en port, skal vi rydde de 4 felter
-                    removePort(index);
-                } else {
-                    cell.className = 'cell';
-                    cell.innerHTML = '';
-                }
+        function handleCellClick(index) {
+            const name = document.getElementById('nameInput').value;
+            const type = document.getElementById('typeSelect').value;
+            const cell = document.getElementById('c-' + index);
+
+            if (currentTool === 'delete') {
+                saveState();
+                cell.innerHTML = '';
+                cell.style.background = '';
                 return;
             }
 
-            if (mode === 'tile') {
-                cell.className = 'cell tile-blue';
-                return;
+            saveState();
+
+            if (type === 'tile') {
+                cell.style.background = selectedColor;
+                cell.style.opacity = "0.6";
+            } else {
+                const port = document.createElement('div');
+                port.className = 'port-overlay';
+                port.style.background = selectedColor;
+                // Juster tekststørrelse hvis navnet er langt
+                const fontSize = name.length > 8 ? '7px' : '10px';
+                port.innerHTML = `<span style="font-size:${fontSize}">${name}</span>`;
+                cell.appendChild(port);
             }
+        }
 
-            if (mode === 'port') {
-                if (row < gridSize - 1 && col < gridSize - 1) {
-                    createPort(index);
-                }
+        function saveState() {
+            history.push(grid.innerHTML);
+            redoStack = [];
+        }
+
+        function undo() {
+            if (history.length > 0) {
+                redoStack.push(grid.innerHTML);
+                grid.innerHTML = history.pop();
             }
         }
 
-        function createPort(index) {
-            const cell = document.getElementById('cell-' + index);
-            // Vi laver porten som et element der dækker 2x2
-            const portDiv = document.createElement('div');
-            portDiv.className = `port port-${colorName}`;
-            portDiv.innerText = "NAVNE";
-            
-            // Dobbeltklik for at ændre navn
-            portDiv.ondblclick = (e) => {
-                e.stopPropagation();
-                let currentName = portDiv.innerText;
-                let input = document.createElement('input');
-                input.value = currentName;
-                portDiv.innerHTML = '';
-                portDiv.appendChild(input);
-                input.focus();
-                input.onblur = () => { portDiv.innerText = input.value || "NAVNE"; };
-                input.onkeydown = (ev) => { if(ev.key === 'Enter') input.blur(); };
-            };
-
-            cell.appendChild(portDiv);
+        function redo() {
+            if (redoStack.length > 0) {
+                history.push(grid.innerHTML);
+                grid.innerHTML = redoStack.pop();
+            }
         }
 
-        function removePort(index) {
-            const cell = document.getElementById('cell-' + index);
-            cell.innerHTML = '';
-        }
+        // Zoom/Pan support for mobil
+        let scale = 1;
+        const view = document.getElementById('viewport');
+        view.addEventListener('wheel', e => {
+            if(e.ctrlKey) {
+                e.preventDefault();
+                scale += e.deltaY * -0.001;
+                scale = Math.min(Math.max(.5, scale), 2);
+                grid.style.transform = `scale(${scale})`;
+            }
+        }, {passive: false});
     </script>
 </body>
 </html>
