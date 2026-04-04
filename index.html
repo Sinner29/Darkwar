@@ -1,95 +1,98 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dark War - Professional Hive Planner</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dark War - Hive Planner V2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
     <style>
         :root { --primary-bg: #1a1a1a; --header-bg: #2d2d2d; --accent: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--primary-bg); color: white; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--primary-bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* Top Bar */
-        .header { background: var(--header-bg); padding: 10px; border-bottom: 2px solid #444; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
-        .row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        /* Header Layout */
+        .header { background: var(--header-bg); padding: 10px; border-bottom: 2px solid #444; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
         
-        .color-dot { width: 25px; height: 25px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
-        .color-dot.active { border-color: white; transform: scale(1.1); }
+        .color-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #555; cursor: pointer; }
+        .color-dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px white; }
         
-        input#nameInput { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 4px; flex-grow: 1; max-width: 150px; }
+        input#nameInput { background: #111; border: 1px solid #555; color: white; padding: 10px; border-radius: 6px; width: 120px; font-weight: bold; }
         
-        button { background: #444; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        button:active { background: #666; }
-        .btn-add { background: var(--accent); }
-        .btn-tool { background: #4a90e2; }
+        button { background: #444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 18px; }
+        .btn-add { background: var(--accent); flex-grow: 1; max-width: 100px; }
+        
+        /* Zoom Slider */
+        .zoom-control { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #aaa; }
 
-        /* Grid Container */
-        #viewport { flex-grow: 1; overflow: auto; position: relative; background: #111; padding: 20px; touch-action: pinch-zoom; }
+        /* Viewport og Canvas */
+        #viewport { flex-grow: 1; overflow: auto; cursor: grab; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+        #viewport:active { cursor: grabbing; }
+
+        #grid-container { transform-origin: center; transition: transform 0.1s ease-out; padding: 100px; }
+
         #grid { 
             display: grid; 
-            grid-template-columns: repeat(24, 30px); 
-            grid-template-rows: repeat(24, 30px); 
+            grid-template-columns: repeat(24, 40px); 
+            grid-template-rows: repeat(24, 40px); 
             gap: 1px; 
             background: #333; 
-            width: fit-content;
-            margin: auto;
+            border: 2px solid #555;
         }
 
         .cell { 
-            width: 30px; height: 30px; background: #222; 
+            width: 40px; height: 40px; background: #1e1e1e; 
             display: flex; align-items: center; justify-content: center;
-            font-size: 8px; font-weight: bold; text-align: center;
-            word-break: break-all; overflow: hidden; position: relative;
+            font-size: 10px; font-weight: bold; text-align: center;
+            position: relative; pointer-events: auto;
         }
 
-        /* Elements */
+        /* Elementer */
         .port-overlay { 
-            position: absolute; width: 61px; height: 61px; /* 2x2 plus gap */
+            position: absolute; width: 81px; height: 81px; /* 2x2 plus gap */
             z-index: 10; display: flex; align-items: center; justify-content: center;
-            padding: 2px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.3);
-            font-size: 10px; pointer-events: none;
+            padding: 5px; box-sizing: border-box; border: 2px solid rgba(255,255,255,0.4);
+            font-size: 12px; font-weight: 900; color: white; text-shadow: 1px 1px 2px black;
+            pointer-events: none; text-align: center; word-break: break-word;
         }
-        .tile-overlay { width: 100%; height: 100%; opacity: 0.5; pointer-events: none; }
-
     </style>
 </head>
 <body>
 
     <div class="header">
         <div class="row">
-            <div class="color-dot active" style="background: #2980b9;" onclick="selectColor('#2980b9', this)"></div>
-            <div class="color-dot" style="background: #f1c40f;" onclick="selectColor('#f1c40f', this)"></div>
-            <div class="color-dot" style="background: #e67e22;" onclick="selectColor('#e67e22', this)"></div>
-            <div class="color-dot" style="background: #2ecc71;" onclick="selectColor('#2ecc71', this)"></div>
+            <div class="color-dot active" style="background: #e1c699;" onclick="selectColor('#e1c699', this)"></div> <div class="color-dot" style="background: #222;" onclick="selectColor('#222', this)"></div>
+            <div class="color-dot" style="background: white;" onclick="selectColor('white', this)"></div>
+            <div class="color-dot" style="background: #6b8e23;" onclick="selectColor('#6b8e23', this)"></div>
             <button onclick="undo()">↩️</button>
             <button onclick="redo()">↪️</button>
             <button style="background:#c0392b" onclick="setTool('delete')">🗑️</button>
         </div>
         <div class="row">
-            <select id="typeSelect" style="background:#333; color:white; padding:8px; border-radius:4px;">
-                <option value="port">Port (2x2)</option>
-                <option value="tile">Tile (1x1)</option>
-            </select>
             <input type="text" id="nameInput" placeholder="Navn...">
             <button class="btn-add" onclick="setTool('add')">✚ Add</button>
+            <div class="zoom-control">
+                <span>Zoom:</span>
+                <input type="range" min="0.3" max="2" step="0.1" value="1" oninput="updateZoom(this.value)">
+            </div>
         </div>
     </div>
 
     <div id="viewport">
-        <div id="grid"></div>
+        <div id="grid-container" id="zoomTarget">
+            <div id="grid"></div>
+        </div>
     </div>
 
     <script>
-        let selectedColor = '#2980b9';
+        let selectedColor = '#e1c699';
         let currentTool = 'add';
         let history = [];
         let redoStack = [];
         const gridSize = 24;
 
-        // Init Grid
+        // Byg Grid
         const grid = document.getElementById('grid');
         for (let i = 0; i < gridSize * gridSize; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
-            cell.id = 'c-' + i;
             cell.onclick = () => handleCellClick(i);
             grid.appendChild(cell);
         }
@@ -101,40 +104,35 @@
             setTool('add');
         }
 
-        function setTool(tool) {
-            currentTool = tool;
-            document.querySelector('.btn-add').style.opacity = tool === 'add' ? '1' : '0.5';
+        function setTool(t) { currentTool = t; }
+
+        function updateZoom(val) {
+            document.getElementById('grid-container').style.transform = `scale(${val})`;
         }
 
         function handleCellClick(index) {
-            const name = document.getElementById('nameInput').value;
-            const type = document.getElementById('typeSelect').value;
-            const cell = document.getElementById('c-' + index);
+            const name = document.getElementById('nameInput').value || "Navn";
+            const cell = grid.children[index];
 
             if (currentTool === 'delete') {
                 saveState();
                 cell.innerHTML = '';
-                cell.style.background = '';
                 return;
             }
 
             saveState();
-
-            if (type === 'tile') {
-                cell.style.background = selectedColor;
-                cell.style.opacity = "0.6";
-            } else {
-                const port = document.createElement('div');
-                port.className = 'port-overlay';
-                port.style.background = selectedColor;
-                // Juster tekststørrelse hvis navnet er langt
-                const fontSize = name.length > 8 ? '7px' : '10px';
-                port.innerHTML = `<span style="font-size:${fontSize}">${name}</span>`;
-                cell.appendChild(port);
-            }
+            const port = document.createElement('div');
+            port.className = 'port-overlay';
+            port.style.background = selectedColor;
+            // Skift tekstfarve hvis baggrunden er hvid
+            if(selectedColor === 'white') port.style.color = 'black';
+            
+            port.innerHTML = `<span>${name}</span>`;
+            cell.appendChild(port);
         }
 
         function saveState() {
+            if (history.length > 20) history.shift();
             history.push(grid.innerHTML);
             redoStack = [];
         }
@@ -153,17 +151,30 @@
             }
         }
 
-        // Zoom/Pan support for mobil
-        let scale = 1;
-        const view = document.getElementById('viewport');
-        view.addEventListener('wheel', e => {
-            if(e.ctrlKey) {
-                e.preventDefault();
-                scale += e.deltaY * -0.001;
-                scale = Math.min(Math.max(.5, scale), 2);
-                grid.style.transform = `scale(${scale})`;
-            }
-        }, {passive: false});
+        // Gør det muligt at trække rundt med mus/finger
+        const slider = document.getElementById('viewport');
+        let isDown = false;
+        let startX, startY, scrollLeft, scrollTop;
+
+        slider.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - slider.offsetLeft;
+            startY = e.pageY - slider.offsetTop;
+            scrollLeft = slider.scrollLeft;
+            scrollTop = slider.scrollTop;
+        });
+        slider.addEventListener('mouseleave', () => isDown = false);
+        slider.addEventListener('mouseup', () => isDown = false);
+        slider.addEventListener('mousemove', (e) => {
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - slider.offsetLeft;
+            const walkX = (x - startX);
+            const y = e.pageY - slider.offsetTop;
+            const walkY = (y - startY);
+            slider.scrollLeft = scrollLeft - walkX;
+            slider.scrollTop = scrollTop - walkY;
+        });
     </script>
 </body>
 </html>
