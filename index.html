@@ -3,62 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Undo & Redo</title>
+    <title>Dark War - Export/Import Labels</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
             --bg-color: #d8a06f; 
-            --port-green: #5aab61; 
-            --port-yellow: #f1c40f; 
-            --glow-blue-dark: rgba(22, 114, 120, 0.45);
-            --glow-border: #1abc9c;
+            --port-teal-blue: #145a82;   
+            --port-muted-orange: #b35a00; 
+            --glow-blue-dark: rgba(20, 90, 130, 0.45); 
+            --glow-orange-dark: rgba(179, 90, 0, 0.45); 
+            --world-dark-grey: #454d55; 
             --panel: #2d2d2d; 
             --grid-line: rgba(0,0,0,0.15); 
         }
         
         body { font-family:sans-serif; background:var(--bg-color); color:#333; margin:0; overflow:hidden; height:100vh; touch-action:none; }
-        
         .controls { position:fixed; top:0; left:0; right:0; background:var(--panel); padding:10px; display:flex; flex-direction:column; gap:8px; z-index:1000; border-bottom:2px solid #555; }
         .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content: center; }
         
-        input, button { padding:10px; border-radius:4px; border:none; font-size:12px; background:#444; color:white; min-width: 35px; cursor: pointer; }
-        #pIn { flex-grow: 1; min-width: 100px; }
+        /* Justerede knapper for at give plads til tekst */
+        input, button { padding:8px 10px; border-radius:4px; border:none; font-size:11px; background:#444; color:white; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         
-        .color-btn { width: 35px; height: 35px; border-radius: 0; border: 2px solid transparent; cursor: pointer; box-sizing: border-box; }
+        .color-btn { width: 30px; height: 30px; border: 2px solid transparent; cursor: pointer; box-sizing: border-box; flex-shrink: 0; }
         .color-btn.active { border-color: white; }
 
         #viewport { width:100vw; height:100vh; position:relative; background: var(--bg-color); overflow: hidden; }
-        #zoom-layer { position:absolute; transform-origin: 0 0; width:5000px; height:5000px; }
-        
-        #grid { 
-            width:100%; height:100%; 
-            background-size: 20px 20px;
-            background-image: 
-                linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-                linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-            background-position: -0.5px -0.5px;
-        }
+        #zoom-layer { position:absolute; transform-origin: 0 0; width:5000px; height:5000px; will-change: transform; }
+        #grid { width:100%; height:100%; background-size: 20px 20px; background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px); }
 
         .obj { 
-            position:absolute; 
-            display:flex; 
-            align-items:center; 
-            justify-content:center; 
-            font-weight:bold; 
-            text-align:center; 
-            font-size:9px; 
-            box-sizing: border-box; 
-            z-index:10; 
-            border-radius: 0 !important;
-            color: #2c3e50;
-            text-shadow: none !important;
+            position:absolute; display:flex; align-items:center; justify-content:center; 
+            font-size:8px; font-weight: 400; color: #fff !important; 
+            text-align:center; line-height: 1.1; box-sizing: border-box; z-index:10; 
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3) !important; 
+            outline: 1px solid rgba(255,255,255,0.15); outline-offset: -1px;
         }
         
-        .port { width:40px; height:40px; outline: 1px solid rgba(255,255,255,0.3); outline-offset: -1px; }
-        .tile-blue { width:20px; height:20px; background: var(--glow-blue-dark); outline: 1px solid var(--glow-border); outline-offset: -1px; }
+        .zone { width:20px; height:20px; background: rgba(0,0,0,0.35); outline: none; z-index: 5; }
+        .port { width:40px; height:40px; }
+        .tile-blue { width:20px; height:20px; background: var(--glow-blue-dark); outline-color: var(--port-teal-blue); }
+        .tile-orange { width:20px; height:20px; background: var(--glow-orange-dark); outline-color: var(--port-muted-orange); }
+        .pyramid { width:140px; height:140px; background: var(--world-dark-grey); font-size: 11px; } 
+        .oasis { width:100px; height:100px; background: var(--world-dark-grey); font-size: 10px; } 
+        .stronghold { width:100px; height:100px; background: var(--world-dark-grey); font-size: 9px; } 
 
         .dragging { opacity: 0.8; z-index: 1000 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-
         #modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2000; display:none; align-items:center; justify-content:center; }
         .m-box { background:#333; padding:20px; border-radius:10px; width:85%; max-width: 300px; display:flex; flex-direction:column; gap:12px; color: white; }
     </style>
@@ -66,17 +55,20 @@
 <body>
     <div class="controls">
         <div class="row">
-            <div class="color-btn active" style="background:var(--port-green)" onclick="selectColor('port', 'var(--port-green)', this)"></div>
-            <div class="color-btn" style="background:var(--port-yellow)" onclick="selectColor('port', 'var(--port-yellow)', this)"></div>
-            <div class="color-btn" style="border: 1px solid var(--glow-border); background:var(--glow-blue-dark);" onclick="selectColor('tile', 'var(--glow-blue-dark)', this)"></div>
-            
+            <div class="color-btn active" style="background:var(--port-teal-blue)" onclick="selectType('port', 'var(--port-teal-blue)', this)"></div>
+            <div class="color-btn" style="background:var(--port-muted-orange)" onclick="selectType('port', 'var(--port-muted-orange)', this)"></div>
+            <div class="color-btn" style="border: 1px solid var(--port-teal-blue); background:var(--glow-blue-dark);" onclick="selectType('tile-blue', 'var(--glow-blue-dark)', this)"></div>
+            <div class="color-btn" style="border: 1px solid var(--port-muted-orange); background:var(--glow-orange-dark);" onclick="selectType('tile-orange', 'var(--glow-orange-dark)', this)"></div>
+            <div class="color-btn" style="background:rgba(0,0,0,0.6);" onclick="selectType('zone', '', this)"></div>
+            <button onclick="exportMap()" style="background:#8e44ad">📤 Export</button>
+            <button onclick="importMap()" style="background:#2980b9">📥 Import</button>
             <button onclick="undo()">↩️</button>
             <button onclick="redo()">↪️</button>
-            
             <button onclick="clearAll()" style="background:#c0392b">Ryd</button>
         </div>
         <div class="row">
-            <input type="text" id="pIn" placeholder="Navn...">
+            <button onclick="addSpecial('pyramid', 'PYRAMID')">🏜️</button>
+            <input type="text" id="pIn" placeholder="Navn..." style="flex:1">
             <button onclick="addI()" style="background:#e74c3c">✚ Tilføj</button>
         </div>
     </div>
@@ -95,87 +87,76 @@
 
     <script>
         const zl = document.getElementById('zoom-layer'), gd = document.getElementById('grid'), vp = document.getElementById('viewport');
-        let sc = 1.0, px = 0, py = 0;
-        
-        // Stacks til historik
-        let history = [];
-        let redoStack = [];
-        
-        let curType = 'port', curColor = 'var(--port-green)';
+        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = 'var(--port-teal-blue)';
 
-        // --- Zoom & Pan (uændret for at bevare stabilitet) ---
-        function applyTransform(zoomAtX, zoomAtY, newScale) {
-            const oldScale = sc;
-            sc = Math.max(0.2, Math.min(newScale, 4));
-            px -= (zoomAtX - px) * (sc / oldScale - 1);
-            py -= (zoomAtY - py) * (sc / oldScale - 1);
-            zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`;
+        function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
+
+        function exportMap() {
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => [el.innerText, el.dataset.t, el.style.backgroundColor, parseInt(el.style.left), parseInt(el.style.top)]);
+            prompt("Kopiér din Export-kode herunder:", btoa(JSON.stringify(data)));
+        }
+
+        function importMap() {
+            const code = prompt("Indsæt din Import-kode her:");
+            if (!code) return;
+            try {
+                const decoded = JSON.parse(atob(code));
+                gd.innerHTML = "";
+                decoded.forEach(i => addI({ n: i[0], t: i[1], c: i[2], l: i[3], top: i[4] }, false));
+                saveState();
+            } catch (e) { alert("Ugyldig kode!"); }
         }
 
         const hm = new Hammer(vp);
         hm.get('pinch').set({ enable: true });
-        let sS = 1;
-        hm.on('pinchstart', () => { sS = sc; });
-        hm.on('pinchmove', (e) => { applyTransform(e.center.x, e.center.y, sS * e.scale); });
-        hm.on('pan', (e) => { if (e.target !== gd && e.target !== vp) return; zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
-        hm.on('panend', (e) => { if (e.target !== gd && e.target !== vp) return; px += e.deltaX; py += e.deltaY; });
+        let startSc, cX, cY;
+        hm.on('pinchstart', (e) => { startSc = sc; cX = e.center.x; cY = e.center.y; });
+        hm.on('pinchmove', (e) => {
+            const old = sc; sc = Math.max(0.2, Math.min(startSc * e.scale, 4));
+            px -= (cX - px) * (sc / old - 1); py -= (cY - py) * (sc / old - 1);
+            requestAnimationFrame(updateTransform);
+        });
+        hm.on('panmove', (e) => { if (e.target === gd || e.target === vp) zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
+        hm.on('panend', (e) => { if (e.target === gd || e.target === vp) { px += e.deltaX; py += e.deltaY; updateTransform(); } });
 
-        function selectColor(t, c, el) { curType = t; curColor = c; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
+        function selectType(t, c, el) { curType = t; curColor = c; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
 
-        // --- Ny Logik til State Management ---
         function saveState(clearRedo = true) {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ 
-                n: el.innerText, 
-                t: el.dataset.t, 
-                c: el.style.backgroundColor, 
-                l: parseFloat(el.style.left), 
-                top: parseFloat(el.style.top) 
-            }));
-            const stateString = JSON.stringify(data);
-            
-            // Hvis det er en ny handling, sletter vi redo-mulighederne
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top) }));
+            history.push(JSON.stringify(data));
             if (clearRedo) redoStack = [];
-            
-            history.push(stateString);
-            localStorage.setItem('dw_history_final', stateString);
+            localStorage.setItem('dw_final_save', JSON.stringify(data));
         }
 
-        function renderFromData(data) {
-            gd.innerHTML = "";
-            data.forEach(i => addI(i, false));
+        function isAreaBlocked(x, y, type) {
+            const size = (type === 'port') ? 40 : (type === 'pyramid' ? 140 : (type === 'oasis' || type === 'stronghold' ? 100 : 20));
+            const zones = Array.from(document.querySelectorAll('.zone'));
+            for (let ox = 0; ox < size; ox += 20) {
+                for (let oy = 0; oy < size; oy += 20) {
+                    if (zones.some(z => parseInt(z.style.left) === x + ox && parseInt(z.style.top) === y + oy)) return true;
+                }
+            }
+            return false;
         }
 
-        function undo() {
-            if (history.length <= 1) return;
-            // Flyt nuværende state til redo
-            redoStack.push(history.pop());
-            // Gendan forrige state
-            renderFromData(JSON.parse(history[history.length - 1]));
-        }
+        function addSpecial(type, name) { addI({ n: name, t: type, c: "", l: null, top: null }); }
 
-        function redo() {
-            if (redoStack.length === 0) return;
-            const state = redoStack.pop();
-            history.push(state);
-            renderFromData(JSON.parse(state));
-        }
-
-        // --- Element håndtering ---
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
-            const name = d ? d.n : (document.getElementById('pIn').value || "");
-            const color = d ? d.c : curColor;
+            const rawX = (d && d.l !== null) ? d.l : (window.innerWidth / 2 - px) / sc;
+            const rawY = (d && d.top !== null) ? d.top : (window.innerHeight / 2 - py) / sc;
+            const x = Math.floor(rawX / 20) * 20, y = Math.floor(rawY / 20) * 20;
+
+            if (type !== 'zone' && !d && isAreaBlocked(x, y, type)) {
+                alert("Området er blokeret!"); return;
+            }
+
             const dv = document.createElement('div');
-            dv.className = `obj ${type === 'port' ? 'port' : 'tile-blue'}`;
+            dv.className = `obj ${type}`;
             dv.dataset.t = type;
-            if(type === 'port') dv.style.backgroundColor = color;
-            dv.innerText = type === 'port' ? name : "";
-            
-            const rawX = d ? d.l : (window.innerWidth / 2 - px) / sc;
-            const rawY = d ? d.top : (window.innerHeight / 2 - py) / sc;
-            
-            dv.style.left = (Math.floor(rawX / 20) * 20) + "px";
-            dv.style.top = (Math.floor(rawY / 20) * 20) + "px";
+            if (d ? d.c : curColor) dv.style.backgroundColor = d ? d.c : curColor;
+            dv.innerText = (type === 'zone') ? "" : (d ? d.n : (document.getElementById('pIn').value || ""));
+            dv.style.left = x + "px"; dv.style.top = y + "px";
             
             makeD(dv);
             let lt = 0; dv.addEventListener('touchend', () => { if(Date.now() - lt < 300) openM(dv); lt = Date.now(); });
@@ -185,47 +166,32 @@
 
         function makeD(el) {
             let a = false, ox, oy, ix, iy;
-            el.addEventListener("touchstart", (e) => { 
-                e.stopPropagation(); 
-                ox = parseFloat(el.style.left); 
-                oy = parseFloat(el.style.top); 
-                ix = e.touches[0].clientX / sc - ox; 
-                iy = e.touches[0].clientY / sc - oy; 
-                a = true; 
-                el.classList.add('dragging');
-            });
+            el.addEventListener("touchstart", (e) => { e.stopPropagation(); ox = parseInt(el.style.left); oy = parseInt(el.style.top); ix = e.touches[0].clientX / sc - ox; iy = e.touches[0].clientY / sc - oy; a = true; el.classList.add('dragging'); });
             el.addEventListener("touchend", () => { 
-                if(!a) return; 
-                a = false; 
-                el.classList.remove('dragging');
-                el.style.left = Math.round(parseFloat(el.style.left) / 20) * 20 + "px"; 
-                el.style.top = Math.round(parseFloat(el.style.top) / 20) * 20 + "px"; 
-                saveState(); 
+                if(!a) return; a = false; el.classList.remove('dragging');
+                const x = Math.round((parseFloat(el.style.left)) / 20) * 20, y = Math.round((parseFloat(el.style.top)) / 20) * 20;
+                if (el.dataset.t !== 'zone' && isAreaBlocked(x, y, el.dataset.t)) {
+                    el.style.left = ox + "px"; el.style.top = oy + "px";
+                } else { el.style.left = x + "px"; el.style.top = y + "px"; saveState(); }
             });
-            el.addEventListener("touchmove", (e) => { 
-                if (!a) return; 
-                e.preventDefault(); 
-                el.style.left = (e.touches[0].clientX / sc - ix) + "px"; 
-                el.style.top = (e.touches[0].clientY / sc - iy) + "px"; 
-            });
+            el.addEventListener("touchmove", (e) => { if (!a) return; e.preventDefault(); el.style.left = (e.touches[0].clientX / sc - ix) + "px"; el.style.top = (e.touches[0].clientY / sc - iy) + "px"; });
         }
 
         let cur = null;
         function openM(el) { cur = el; document.getElementById('eIn').value = el.innerText; document.getElementById('modal').style.display = 'flex'; }
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
-        function delI() { if(confirm("Slet?")) { cur.remove(); saveState(); closeM(); } }
-        function clearAll() { if(confirm("Ryd alt?")) { localStorage.removeItem('dw_history_final'); location.reload(); } }
+        function delI() { if(confirm("Slet objekt?")) { cur.remove(); saveState(); closeM(); } }
+        function clearAll() { if(confirm("Ryd hele kortet?")) { localStorage.removeItem('dw_final_save'); location.reload(); } }
+        
+        function undo() { if (history.length <= 1) return; redoStack.push(history.pop()); render(JSON.parse(history[history.length - 1])); }
+        function redo() { if (redoStack.length === 0) return; const state = redoStack.pop(); history.push(state); render(JSON.parse(state)); }
+        function render(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
         window.onload = () => { 
-            const d = localStorage.getItem('dw_history_final'); 
-            if (d) { 
-                history.push(d); 
-                renderFromData(JSON.parse(d)); 
-            } else {
-                history.push("[]");
-            }
-            zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`;
+            const d = localStorage.getItem('dw_final_save'); 
+            if (d) { history.push(d); render(JSON.parse(d)); } else history.push("[]");
+            updateTransform();
         };
     </script>
 </body>
