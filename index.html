@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Clean Text Precision</title>
+    <title>Dark War - Undo & Redo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -21,7 +21,7 @@
         .controls { position:fixed; top:0; left:0; right:0; background:var(--panel); padding:10px; display:flex; flex-direction:column; gap:8px; z-index:1000; border-bottom:2px solid #555; }
         .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content: center; }
         
-        input, button { padding:10px; border-radius:4px; border:none; font-size:12px; background:#444; color:white; }
+        input, button { padding:10px; border-radius:4px; border:none; font-size:12px; background:#444; color:white; min-width: 35px; cursor: pointer; }
         #pIn { flex-grow: 1; min-width: 100px; }
         
         .color-btn { width: 35px; height: 35px; border-radius: 0; border: 2px solid transparent; cursor: pointer; box-sizing: border-box; }
@@ -50,10 +50,8 @@
             box-sizing: border-box; 
             z-index:10; 
             border-radius: 0 !important;
-            
-            /* NY REN TEKST-STYLING */
-            color: #2c3e50; /* Mørkegrå tekst */
-            text-shadow: none !important; /* INGEN SKYGGE */
+            color: #2c3e50;
+            text-shadow: none !important;
         }
         
         .port { width:40px; height:40px; outline: 1px solid rgba(255,255,255,0.3); outline-offset: -1px; }
@@ -71,7 +69,10 @@
             <div class="color-btn active" style="background:var(--port-green)" onclick="selectColor('port', 'var(--port-green)', this)"></div>
             <div class="color-btn" style="background:var(--port-yellow)" onclick="selectColor('port', 'var(--port-yellow)', this)"></div>
             <div class="color-btn" style="border: 1px solid var(--glow-border); background:var(--glow-blue-dark);" onclick="selectColor('tile', 'var(--glow-blue-dark)', this)"></div>
+            
             <button onclick="undo()">↩️</button>
+            <button onclick="redo()">↪️</button>
+            
             <button onclick="clearAll()" style="background:#c0392b">Ryd</button>
         </div>
         <div class="row">
@@ -94,9 +95,15 @@
 
     <script>
         const zl = document.getElementById('zoom-layer'), gd = document.getElementById('grid'), vp = document.getElementById('viewport');
-        let sc = 1.0, px = 0, py = 0, history = [];
+        let sc = 1.0, px = 0, py = 0;
+        
+        // Stacks til historik
+        let history = [];
+        let redoStack = [];
+        
         let curType = 'port', curColor = 'var(--port-green)';
 
+        // --- Zoom & Pan (uændret for at bevare stabilitet) ---
         function applyTransform(zoomAtX, zoomAtY, newScale) {
             const oldScale = sc;
             sc = Math.max(0.2, Math.min(newScale, 4));
@@ -115,14 +122,45 @@
 
         function selectColor(t, c, el) { curType = t; curColor = c; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
 
-        function saveState() {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseFloat(el.style.left), top: parseFloat(el.style.top) }));
-            history.push(JSON.stringify(data));
-            localStorage.setItem('dw_clean_text', JSON.stringify(data));
+        // --- Ny Logik til State Management ---
+        function saveState(clearRedo = true) {
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ 
+                n: el.innerText, 
+                t: el.dataset.t, 
+                c: el.style.backgroundColor, 
+                l: parseFloat(el.style.left), 
+                top: parseFloat(el.style.top) 
+            }));
+            const stateString = JSON.stringify(data);
+            
+            // Hvis det er en ny handling, sletter vi redo-mulighederne
+            if (clearRedo) redoStack = [];
+            
+            history.push(stateString);
+            localStorage.setItem('dw_history_final', stateString);
         }
 
-        function renderFromData(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
+        function renderFromData(data) {
+            gd.innerHTML = "";
+            data.forEach(i => addI(i, false));
+        }
 
+        function undo() {
+            if (history.length <= 1) return;
+            // Flyt nuværende state til redo
+            redoStack.push(history.pop());
+            // Gendan forrige state
+            renderFromData(JSON.parse(history[history.length - 1]));
+        }
+
+        function redo() {
+            if (redoStack.length === 0) return;
+            const state = redoStack.pop();
+            history.push(state);
+            renderFromData(JSON.parse(state));
+        }
+
+        // --- Element håndtering ---
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
             const name = d ? d.n : (document.getElementById('pIn').value || "");
@@ -141,7 +179,8 @@
             
             makeD(dv);
             let lt = 0; dv.addEventListener('touchend', () => { if(Date.now() - lt < 300) openM(dv); lt = Date.now(); });
-            gd.appendChild(dv); if (s) saveState();
+            gd.appendChild(dv); 
+            if (s) saveState();
         }
 
         function makeD(el) {
@@ -176,12 +215,16 @@
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
         function delI() { if(confirm("Slet?")) { cur.remove(); saveState(); closeM(); } }
-        function clearAll() { if(confirm("Ryd alt?")) { localStorage.removeItem('dw_clean_text'); location.reload(); } }
-        function undo() { if (history.length <= 1) return; history.pop(); renderFromData(JSON.parse(history[history.length - 1])); }
+        function clearAll() { if(confirm("Ryd alt?")) { localStorage.removeItem('dw_history_final'); location.reload(); } }
 
         window.onload = () => { 
-            const d = localStorage.getItem('dw_clean_text'); 
-            if (d) { history.push(d); renderFromData(JSON.parse(d)); } else history.push("[]"); 
+            const d = localStorage.getItem('dw_history_final'); 
+            if (d) { 
+                history.push(d); 
+                renderFromData(JSON.parse(d)); 
+            } else {
+                history.push("[]");
+            }
             zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`;
         };
     </script>
