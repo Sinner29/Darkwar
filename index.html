@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - English Edition</title>
+    <title>Dark War - Lockable Terrain</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -20,8 +20,6 @@
         body { font-family:sans-serif; background:var(--bg-color); color:#333; margin:0; overflow:hidden; height:100vh; touch-action:none; }
         .controls { position:fixed; top:0; left:0; right:0; background:var(--panel); padding:10px; display:flex; flex-direction:column; gap:8px; z-index:1000; border-bottom:2px solid #555; }
         .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content: center; }
-        
-        /* Ensures Undo/Redo stay together on one line */
         .button-group { display: flex; gap: 4px; flex-wrap: nowrap; }
         
         input, button { padding:8px 10px; border-radius:4px; border:none; font-size:11px; background:#444; color:white; cursor: pointer; display: flex; align-items: center; gap: 4px; }
@@ -42,6 +40,8 @@
         }
         
         .zone { width:20px; height:20px; background: rgba(0,0,0,0.35); outline: none; z-index: 5; }
+        .zone.locked { filter: grayscale(1) opacity(0.7); pointer-events: none; }
+        
         .port { width:40px; height:40px; }
         .tile-blue { width:20px; height:20px; background: var(--glow-blue-dark); outline-color: var(--port-teal-blue); }
         .tile-orange { width:20px; height:20px; background: var(--glow-orange-dark); outline-color: var(--port-muted-orange); }
@@ -61,22 +61,24 @@
             <div class="color-btn" style="background:var(--port-muted-orange)" onclick="selectType('port', 'var(--port-muted-orange)', this)"></div>
             <div class="color-btn" style="border: 1px solid var(--port-teal-blue); background:var(--glow-blue-dark);" onclick="selectType('tile-blue', 'var(--glow-blue-dark)', this)"></div>
             <div class="color-btn" style="border: 1px solid var(--port-muted-orange); background:var(--glow-orange-dark);" onclick="selectType('tile-orange', 'var(--glow-orange-dark)', this)"></div>
-            <div class="color-btn" style="background:rgba(0,0,0,0.6);" onclick="selectType('zone', '', this)"></div>
             
+            <div class="button-group" style="align-items: center;">
+                <div class="color-btn" style="background:rgba(0,0,0,0.6);" onclick="selectType('zone', '', this)"></div>
+                <button id="lockBtn" onclick="toggleLock()" style="background:#27ae60; padding: 6px;">🔓</button>
+            </div>
+
             <button onclick="exportMap()" style="background:#8e44ad">📤 Export</button>
             <button onclick="importMap()" style="background:#2980b9">📥 Import</button>
-            
+        </div>
+        <div class="row">
             <div class="button-group">
                 <button onclick="undo()">↩️</button>
                 <button onclick="redo()">↪️</button>
             </div>
-            
-            <button onclick="clearAll()" style="background:#c0392b">Clear</button>
-        </div>
-        <div class="row">
             <button onclick="addSpecial('pyramid', 'PYRAMID')">🏜️</button>
             <input type="text" id="pIn" placeholder="Name..." style="flex:1">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
+            <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
     </div>
 
@@ -94,24 +96,39 @@
 
     <script>
         const zl = document.getElementById('zoom-layer'), gd = document.getElementById('grid'), vp = document.getElementById('viewport');
-        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = 'var(--port-teal-blue)';
+        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = 'var(--port-teal-blue)', terrainLocked = false;
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
+        // Optimized Export: Mini-format
         function exportMap() {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => [el.innerText, el.dataset.t, el.style.backgroundColor, parseInt(el.style.left), parseInt(el.style.top)]);
-            prompt("Copy your Export code:", btoa(JSON.stringify(data)));
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({
+                n: el.innerText,
+                t: el.dataset.t,
+                c: el.style.backgroundColor,
+                x: parseInt(el.style.left),
+                y: parseInt(el.style.top)
+            }));
+            prompt("Export Code:", btoa(JSON.stringify(data)));
         }
 
         function importMap() {
-            const code = prompt("Paste your Import code here:");
+            const code = prompt("Paste Import code:");
             if (!code) return;
             try {
                 const decoded = JSON.parse(atob(code));
                 gd.innerHTML = "";
-                decoded.forEach(i => addI({ n: i[0], t: i[1], c: i[2], l: i[3], top: i[4] }, false));
+                decoded.forEach(i => addI({ n: i.n, t: i.t, c: i.c, l: i.x, top: i.y }, false));
                 saveState();
             } catch (e) { alert("Invalid code!"); }
+        }
+
+        function toggleLock() {
+            terrainLocked = !terrainLocked;
+            const btn = document.getElementById('lockBtn');
+            btn.innerHTML = terrainLocked ? "🔒" : "🔓";
+            btn.style.background = terrainLocked ? "#c0392b" : "#27ae60";
+            document.querySelectorAll('.zone').forEach(z => z.classList.toggle('locked', terrainLocked));
         }
 
         const hm = new Hammer(vp);
@@ -132,7 +149,7 @@
             const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top) }));
             history.push(JSON.stringify(data));
             if (clearRedo) redoStack = [];
-            localStorage.setItem('dw_eng_save', JSON.stringify(data));
+            localStorage.setItem('dw_lock_save', JSON.stringify(data));
         }
 
         function isAreaBlocked(x, y, type) {
@@ -154,26 +171,32 @@
             const rawY = (d && d.top !== null) ? d.top : (window.innerHeight / 2 - py) / sc;
             const x = Math.floor(rawX / 20) * 20, y = Math.floor(rawY / 20) * 20;
 
-            if (type !== 'zone' && !d && isAreaBlocked(x, y, type)) {
-                alert("This area is blocked by terrain!"); return;
-            }
+            if (type !== 'zone' && !d && isAreaBlocked(x, y, type)) return;
 
             const dv = document.createElement('div');
             dv.className = `obj ${type}`;
+            if (type === 'zone' && terrainLocked) dv.classList.add('locked');
             dv.dataset.t = type;
             if (d ? d.c : curColor) dv.style.backgroundColor = d ? d.c : curColor;
             dv.innerText = (type === 'zone') ? "" : (d ? d.n : (document.getElementById('pIn').value || ""));
             dv.style.left = x + "px"; dv.style.top = y + "px";
             
             makeD(dv);
-            let lt = 0; dv.addEventListener('touchend', () => { if(Date.now() - lt < 300) openM(dv); lt = Date.now(); });
+            let lt = 0; dv.addEventListener('touchend', () => { 
+                if (dv.dataset.t === 'zone' && terrainLocked) return;
+                if(Date.now() - lt < 300) openM(dv); 
+                lt = Date.now(); 
+            });
             gd.appendChild(dv); 
             if (s) saveState();
         }
 
         function makeD(el) {
             let a = false, ox, oy, ix, iy;
-            el.addEventListener("touchstart", (e) => { e.stopPropagation(); ox = parseInt(el.style.left); oy = parseInt(el.style.top); ix = e.touches[0].clientX / sc - ox; iy = e.touches[0].clientY / sc - oy; a = true; el.classList.add('dragging'); });
+            el.addEventListener("touchstart", (e) => { 
+                if (el.dataset.t === 'zone' && terrainLocked) return;
+                e.stopPropagation(); ox = parseInt(el.style.left); oy = parseInt(el.style.top); ix = e.touches[0].clientX / sc - ox; iy = e.touches[0].clientY / sc - oy; a = true; el.classList.add('dragging'); 
+            });
             el.addEventListener("touchend", () => { 
                 if(!a) return; a = false; el.classList.remove('dragging');
                 const x = Math.round((parseFloat(el.style.left)) / 20) * 20, y = Math.round((parseFloat(el.style.top)) / 20) * 20;
@@ -188,15 +211,15 @@
         function openM(el) { cur = el; document.getElementById('eIn').value = el.innerText; document.getElementById('modal').style.display = 'flex'; }
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
-        function delI() { if(confirm("Delete this object?")) { cur.remove(); saveState(); closeM(); } }
-        function clearAll() { if(confirm("Clear the entire map?")) { localStorage.removeItem('dw_eng_save'); location.reload(); } }
+        function delI() { if(confirm("Delete?")) { cur.remove(); saveState(); closeM(); } }
+        function clearAll() { if(confirm("Clear Map?")) { localStorage.removeItem('dw_lock_save'); location.reload(); } }
         
         function undo() { if (history.length <= 1) return; redoStack.push(history.pop()); render(JSON.parse(history[history.length - 1])); }
         function redo() { if (redoStack.length === 0) return; const state = redoStack.pop(); history.push(state); render(JSON.parse(state)); }
         function render(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
         window.onload = () => { 
-            const d = localStorage.getItem('dw_eng_save'); 
+            const d = localStorage.getItem('dw_lock_save'); 
             if (d) { history.push(d); render(JSON.parse(d)); } else history.push("[]");
             updateTransform();
         };
