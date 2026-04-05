@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Export/Import Labels</title>
+    <title>Dark War - English Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -21,7 +21,9 @@
         .controls { position:fixed; top:0; left:0; right:0; background:var(--panel); padding:10px; display:flex; flex-direction:column; gap:8px; z-index:1000; border-bottom:2px solid #555; }
         .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content: center; }
         
-        /* Justerede knapper for at give plads til tekst */
+        /* Ensures Undo/Redo stay together on one line */
+        .button-group { display: flex; gap: 4px; flex-wrap: nowrap; }
+        
         input, button { padding:8px 10px; border-radius:4px; border:none; font-size:11px; background:#444; color:white; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         
         .color-btn { width: 30px; height: 30px; border: 2px solid transparent; cursor: pointer; box-sizing: border-box; flex-shrink: 0; }
@@ -60,27 +62,32 @@
             <div class="color-btn" style="border: 1px solid var(--port-teal-blue); background:var(--glow-blue-dark);" onclick="selectType('tile-blue', 'var(--glow-blue-dark)', this)"></div>
             <div class="color-btn" style="border: 1px solid var(--port-muted-orange); background:var(--glow-orange-dark);" onclick="selectType('tile-orange', 'var(--glow-orange-dark)', this)"></div>
             <div class="color-btn" style="background:rgba(0,0,0,0.6);" onclick="selectType('zone', '', this)"></div>
+            
             <button onclick="exportMap()" style="background:#8e44ad">📤 Export</button>
             <button onclick="importMap()" style="background:#2980b9">📥 Import</button>
-            <button onclick="undo()">↩️</button>
-            <button onclick="redo()">↪️</button>
-            <button onclick="clearAll()" style="background:#c0392b">Ryd</button>
+            
+            <div class="button-group">
+                <button onclick="undo()">↩️</button>
+                <button onclick="redo()">↪️</button>
+            </div>
+            
+            <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
         <div class="row">
             <button onclick="addSpecial('pyramid', 'PYRAMID')">🏜️</button>
-            <input type="text" id="pIn" placeholder="Navn..." style="flex:1">
-            <button onclick="addI()" style="background:#e74c3c">✚ Tilføj</button>
+            <input type="text" id="pIn" placeholder="Name..." style="flex:1">
+            <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
         </div>
     </div>
 
     <div id="viewport"><div id="zoom-layer"><div id="grid"></div></div></div>
 
     <div id="modal"><div class="m-box">
-        <h3 style="margin:0">Rediger</h3>
+        <h3 style="margin:0">Edit Object</h3>
         <input type="text" id="eIn">
         <div class="row">
-            <button onclick="saveE()" style="background:#27ae60; flex:1">Gem</button>
-            <button onclick="delI()" style="background:#c0392b">Slet</button>
+            <button onclick="saveE()" style="background:#27ae60; flex:1">Save</button>
+            <button onclick="delI()" style="background:#c0392b">Delete</button>
             <button onclick="closeM()">X</button>
         </div>
     </div></div>
@@ -93,18 +100,18 @@
 
         function exportMap() {
             const data = Array.from(document.querySelectorAll('.obj')).map(el => [el.innerText, el.dataset.t, el.style.backgroundColor, parseInt(el.style.left), parseInt(el.style.top)]);
-            prompt("Kopiér din Export-kode herunder:", btoa(JSON.stringify(data)));
+            prompt("Copy your Export code:", btoa(JSON.stringify(data)));
         }
 
         function importMap() {
-            const code = prompt("Indsæt din Import-kode her:");
+            const code = prompt("Paste your Import code here:");
             if (!code) return;
             try {
                 const decoded = JSON.parse(atob(code));
                 gd.innerHTML = "";
                 decoded.forEach(i => addI({ n: i[0], t: i[1], c: i[2], l: i[3], top: i[4] }, false));
                 saveState();
-            } catch (e) { alert("Ugyldig kode!"); }
+            } catch (e) { alert("Invalid code!"); }
         }
 
         const hm = new Hammer(vp);
@@ -125,7 +132,7 @@
             const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top) }));
             history.push(JSON.stringify(data));
             if (clearRedo) redoStack = [];
-            localStorage.setItem('dw_final_save', JSON.stringify(data));
+            localStorage.setItem('dw_eng_save', JSON.stringify(data));
         }
 
         function isAreaBlocked(x, y, type) {
@@ -148,7 +155,7 @@
             const x = Math.floor(rawX / 20) * 20, y = Math.floor(rawY / 20) * 20;
 
             if (type !== 'zone' && !d && isAreaBlocked(x, y, type)) {
-                alert("Området er blokeret!"); return;
+                alert("This area is blocked by terrain!"); return;
             }
 
             const dv = document.createElement('div');
@@ -181,15 +188,15 @@
         function openM(el) { cur = el; document.getElementById('eIn').value = el.innerText; document.getElementById('modal').style.display = 'flex'; }
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
-        function delI() { if(confirm("Slet objekt?")) { cur.remove(); saveState(); closeM(); } }
-        function clearAll() { if(confirm("Ryd hele kortet?")) { localStorage.removeItem('dw_final_save'); location.reload(); } }
+        function delI() { if(confirm("Delete this object?")) { cur.remove(); saveState(); closeM(); } }
+        function clearAll() { if(confirm("Clear the entire map?")) { localStorage.removeItem('dw_eng_save'); location.reload(); } }
         
         function undo() { if (history.length <= 1) return; redoStack.push(history.pop()); render(JSON.parse(history[history.length - 1])); }
         function redo() { if (redoStack.length === 0) return; const state = redoStack.pop(); history.push(state); render(JSON.parse(state)); }
         function render(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
         window.onload = () => { 
-            const d = localStorage.getItem('dw_final_save'); 
+            const d = localStorage.getItem('dw_eng_save'); 
             if (d) { history.push(d); render(JSON.parse(d)); } else history.push("[]");
             updateTransform();
         };
