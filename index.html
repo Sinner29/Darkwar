@@ -1,171 +1,189 @@
 <!DOCTYPE html>
-<html>
+<html lang="da">
 <head>
-    <title>Dark War - Tactical Planner</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dark War - Clean Text Precision</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
-        :root { --header-bg: #2d2d2d; --accent: #e74c3c; --btn-active: #ff5e4d; }
-        body { font-family: sans-serif; background: #0a0a0a; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; touch-action: none; }
-
-        .header { background: var(--header-bg); padding: 12px; border-bottom: 2px solid #444; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
-        .row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+        :root { 
+            --bg-color: #d8a06f; 
+            --port-green: #5aab61; 
+            --port-yellow: #f1c40f; 
+            --glow-blue-dark: rgba(22, 114, 120, 0.45);
+            --glow-border: #1abc9c;
+            --panel: #2d2d2d; 
+            --grid-line: rgba(0,0,0,0.15); 
+        }
         
-        .color-picker-wrapper { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; border: 2px solid white; position: relative; }
-        #colorPicker { position: absolute; top: -5px; left: -5px; width: 50px; height: 50px; cursor: pointer; }
+        body { font-family:sans-serif; background:var(--bg-color); color:#333; margin:0; overflow:hidden; height:100vh; touch-action:none; }
         
-        input#nameInput { background: #1a1a1a; border: 1px solid #555; color: white; padding: 12px; border-radius: 6px; flex-grow: 1; max-width: 150px; font-size: 16px; }
+        .controls { position:fixed; top:0; left:0; right:0; background:var(--panel); padding:10px; display:flex; flex-direction:column; gap:8px; z-index:1000; border-bottom:2px solid #555; }
+        .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content: center; }
         
-        button { background: #444; color: white; border: none; padding: 12px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-add { background: var(--accent); display: flex; align-items: center; gap: 5px; }
-        .btn-add.active { background: var(--btn-active); box-shadow: 0 0 15px var(--accent); border: 2px solid white; }
+        input, button { padding:10px; border-radius:4px; border:none; font-size:12px; background:#444; color:white; }
+        #pIn { flex-grow: 1; min-width: 100px; }
+        
+        .color-btn { width: 35px; height: 35px; border-radius: 0; border: 2px solid transparent; cursor: pointer; box-sizing: border-box; }
+        .color-btn.active { border-color: white; }
 
-        #viewport { flex-grow: 1; position: relative; overflow: hidden; background: #000; }
-        #container { position: absolute; transform-origin: 0 0; will-change: transform; }
-
+        #viewport { width:100vw; height:100vh; position:relative; background: var(--bg-color); overflow: hidden; }
+        #zoom-layer { position:absolute; transform-origin: 0 0; width:5000px; height:5000px; }
+        
         #grid { 
-            display: grid; 
-            grid-template-columns: repeat(100, 40px); 
-            grid-template-rows: repeat(100, 40px); 
-            gap: 1px; 
-            background: #222; 
+            width:100%; height:100%; 
+            background-size: 20px 20px;
+            background-image: 
+                linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+            background-position: -0.5px -0.5px;
         }
 
-        .cell { width: 40px; height: 40px; background: #111; position: relative; border: 0.1px solid #1a1a1a; }
-
-        .port-overlay { 
-            position: absolute; width: 81px; height: 81px; 
-            z-index: 10; display: flex; align-items: center; justify-content: center;
-            border: 2px solid rgba(255,255,255,0.4); font-size: 12px; font-weight: bold;
-            text-align: center; color: white; text-shadow: 1px 1px 2px black;
-            cursor: grab; user-select: none; touch-action: none; border-radius: 2px;
+        .obj { 
+            position:absolute; 
+            display:flex; 
+            align-items:center; 
+            justify-content:center; 
+            font-weight:bold; 
+            text-align:center; 
+            font-size:9px; 
+            box-sizing: border-box; 
+            z-index:10; 
+            border-radius: 0 !important;
+            
+            /* NY REN TEKST-STYLING */
+            color: #2c3e50; /* Mørkegrå tekst */
+            text-shadow: none !important; /* INGEN SKYGGE */
         }
+        
+        .port { width:40px; height:40px; outline: 1px solid rgba(255,255,255,0.3); outline-offset: -1px; }
+        .tile-blue { width:20px; height:20px; background: var(--glow-blue-dark); outline: 1px solid var(--glow-border); outline-offset: -1px; }
+
+        .dragging { opacity: 0.8; z-index: 1000 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        #modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2000; display:none; align-items:center; justify-content:center; }
+        .m-box { background:#333; padding:20px; border-radius:10px; width:85%; max-width: 300px; display:flex; flex-direction:column; gap:12px; color: white; }
     </style>
 </head>
 <body>
-
-    <div class="header">
+    <div class="controls">
         <div class="row">
-            <div class="color-picker-wrapper"><input type="color" id="colorPicker" value="#e1c699"></div>
+            <div class="color-btn active" style="background:var(--port-green)" onclick="selectColor('port', 'var(--port-green)', this)"></div>
+            <div class="color-btn" style="background:var(--port-yellow)" onclick="selectColor('port', 'var(--port-yellow)', this)"></div>
+            <div class="color-btn" style="border: 1px solid var(--glow-border); background:var(--glow-blue-dark);" onclick="selectColor('tile', 'var(--glow-blue-dark)', this)"></div>
             <button onclick="undo()">↩️</button>
-            <button onclick="redo()">↪️</button>
-            <button style="background:#c0392b" onclick="setTool('delete')">🗑️</button>
+            <button onclick="clearAll()" style="background:#c0392b">Ryd</button>
         </div>
         <div class="row">
-            <input type="text" id="nameInput" placeholder="Name...">
-            <button class="btn-add" id="addBtn" onclick="prepareAdd()">✚ Add</button>
+            <input type="text" id="pIn" placeholder="Navn...">
+            <button onclick="addI()" style="background:#e74c3c">✚ Tilføj</button>
         </div>
     </div>
 
-    <div id="viewport">
-        <div id="container">
-            <div id="grid"></div>
+    <div id="viewport"><div id="zoom-layer"><div id="grid"></div></div></div>
+
+    <div id="modal"><div class="m-box">
+        <h3 style="margin:0">Rediger</h3>
+        <input type="text" id="eIn">
+        <div class="row">
+            <button onclick="saveE()" style="background:#27ae60; flex:1">Gem</button>
+            <button onclick="delI()" style="background:#c0392b">Slet</button>
+            <button onclick="closeM()">X</button>
         </div>
-    </div>
+    </div></div>
 
     <script>
-        let isReadyToAdd = false;
-        let history = [];
-        let redoStack = [];
-        let scale = 0.8, posX = 20, posY = 20;
-        
-        const grid = document.getElementById('grid');
-        for (let i = 0; i < 100 * 100; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.id = 'idx-' + i;
-            grid.appendChild(cell);
+        const zl = document.getElementById('zoom-layer'), gd = document.getElementById('grid'), vp = document.getElementById('viewport');
+        let sc = 1.0, px = 0, py = 0, history = [];
+        let curType = 'port', curColor = 'var(--port-green)';
+
+        function applyTransform(zoomAtX, zoomAtY, newScale) {
+            const oldScale = sc;
+            sc = Math.max(0.2, Math.min(newScale, 4));
+            px -= (zoomAtX - px) * (sc / oldScale - 1);
+            py -= (zoomAtY - py) * (sc / oldScale - 1);
+            zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`;
         }
 
-        function prepareAdd() {
-            isReadyToAdd = true;
-            document.getElementById('addBtn').classList.add('active');
+        const hm = new Hammer(vp);
+        hm.get('pinch').set({ enable: true });
+        let sS = 1;
+        hm.on('pinchstart', () => { sS = sc; });
+        hm.on('pinchmove', (e) => { applyTransform(e.center.x, e.center.y, sS * e.scale); });
+        hm.on('pan', (e) => { if (e.target !== gd && e.target !== vp) return; zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
+        hm.on('panend', (e) => { if (e.target !== gd && e.target !== vp) return; px += e.deltaX; py += e.deltaY; });
+
+        function selectColor(t, c, el) { curType = t; curColor = c; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
+
+        function saveState() {
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseFloat(el.style.left), top: parseFloat(el.style.top) }));
+            history.push(JSON.stringify(data));
+            localStorage.setItem('dw_clean_text', JSON.stringify(data));
         }
 
-        function setTool(t) {
-            if(t === 'delete') {
-                alert("Klik på en boks for at slette den");
-                isReadyToAdd = false;
-                document.getElementById('addBtn').classList.remove('active');
-            }
-        }
+        function renderFromData(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
-        function createPort(targetCell, name, color) {
-            const port = document.createElement('div');
-            port.className = 'port-overlay';
-            port.style.background = color;
-            port.innerHTML = `<span>${name}</span>`;
+        function addI(d = null, s = true) {
+            const type = d ? d.t : curType;
+            const name = d ? d.n : (document.getElementById('pIn').value || "");
+            const color = d ? d.c : curColor;
+            const dv = document.createElement('div');
+            dv.className = `obj ${type === 'port' ? 'port' : 'tile-blue'}`;
+            dv.dataset.t = type;
+            if(type === 'port') dv.style.backgroundColor = color;
+            dv.innerText = type === 'port' ? name : "";
             
-            let isDraggingPort = false;
+            const rawX = d ? d.l : (window.innerWidth / 2 - px) / sc;
+            const rawY = d ? d.top : (window.innerHeight / 2 - py) / sc;
             
-            port.onpointerdown = (e) => {
-                e.stopPropagation();
-                saveState();
-                isDraggingPort = true;
-                port.setPointerCapture(e.pointerId);
-            };
-
-            port.onpointermove = (e) => {
-                if (!isDraggingPort) return;
-                const rect = grid.getBoundingClientRect();
-                port.style.left = ((e.clientX - rect.left) / scale - 40) + 'px';
-                port.style.top = ((e.clientY - rect.top) / scale - 40) + 'px';
-            };
-
-            port.onpointerup = (e) => {
-                if (!isDraggingPort) return;
-                isDraggingPort = false;
-                const rect = grid.getBoundingClientRect();
-                const col = Math.round(((e.clientX - rect.left) / scale - 40) / 41);
-                const row = Math.round(((e.clientY - rect.top) / scale - 40) / 41);
-                const newCell = document.getElementById('idx-' + (row * 100 + col));
-                
-                port.style.left = '0';
-                port.style.top = '0';
-                if (newCell) newCell.appendChild(port);
-            };
-
-            targetCell.appendChild(port);
+            dv.style.left = (Math.floor(rawX / 20) * 20) + "px";
+            dv.style.top = (Math.floor(rawY / 20) * 20) + "px";
+            
+            makeD(dv);
+            let lt = 0; dv.addEventListener('touchend', () => { if(Date.now() - lt < 300) openM(dv); lt = Date.now(); });
+            gd.appendChild(dv); if (s) saveState();
         }
 
-        const viewport = document.getElementById('viewport');
-        const container = document.getElementById('container');
-        let isPanning = false;
-        let startX, startY;
+        function makeD(el) {
+            let a = false, ox, oy, ix, iy;
+            el.addEventListener("touchstart", (e) => { 
+                e.stopPropagation(); 
+                ox = parseFloat(el.style.left); 
+                oy = parseFloat(el.style.top); 
+                ix = e.touches[0].clientX / sc - ox; 
+                iy = e.touches[0].clientY / sc - oy; 
+                a = true; 
+                el.classList.add('dragging');
+            });
+            el.addEventListener("touchend", () => { 
+                if(!a) return; 
+                a = false; 
+                el.classList.remove('dragging');
+                el.style.left = Math.round(parseFloat(el.style.left) / 20) * 20 + "px"; 
+                el.style.top = Math.round(parseFloat(el.style.top) / 20) * 20 + "px"; 
+                saveState(); 
+            });
+            el.addEventListener("touchmove", (e) => { 
+                if (!a) return; 
+                e.preventDefault(); 
+                el.style.left = (e.touches[0].clientX / sc - ix) + "px"; 
+                el.style.top = (e.touches[0].clientY / sc - iy) + "px"; 
+            });
+        }
 
-        viewport.onpointerdown = (e) => {
-            if (isReadyToAdd && e.target.className === 'cell') {
-                saveState();
-                createPort(e.target, document.getElementById('nameInput').value, document.getElementById('colorPicker').value);
-                isReadyToAdd = false;
-                document.getElementById('addBtn').classList.remove('active');
-            } else {
-                isPanning = true;
-                startX = e.clientX - posX;
-                startY = e.clientY - posY;
-            }
+        let cur = null;
+        function openM(el) { cur = el; document.getElementById('eIn').value = el.innerText; document.getElementById('modal').style.display = 'flex'; }
+        function closeM() { document.getElementById('modal').style.display = 'none'; }
+        function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
+        function delI() { if(confirm("Slet?")) { cur.remove(); saveState(); closeM(); } }
+        function clearAll() { if(confirm("Ryd alt?")) { localStorage.removeItem('dw_clean_text'); location.reload(); } }
+        function undo() { if (history.length <= 1) return; history.pop(); renderFromData(JSON.parse(history[history.length - 1])); }
+
+        window.onload = () => { 
+            const d = localStorage.getItem('dw_clean_text'); 
+            if (d) { history.push(d); renderFromData(JSON.parse(d)); } else history.push("[]"); 
+            zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`;
         };
-
-        window.onpointermove = (e) => {
-            if (!isPanning) return;
-            posX = e.clientX - startX;
-            posY = e.clientY - startY;
-            container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-        };
-
-        window.onpointerup = () => { isPanning = false; };
-
-        viewport.onwheel = (e) => {
-            e.preventDefault();
-            scale *= (e.deltaY > 0 ? 0.9 : 1.1);
-            scale = Math.max(0.1, Math.min(scale, 5));
-            container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-        };
-
-        function saveState() { history.push(grid.innerHTML); redoStack = []; }
-        function undo() { if (history.length > 0) { redoStack.push(grid.innerHTML); grid.innerHTML = history.pop(); } }
-        function redo() { if (redoStack.length > 0) { history.push(grid.innerHTML); grid.innerHTML = redoStack.pop(); } }
-
-        container.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
     </script>
 </body>
 </html>
