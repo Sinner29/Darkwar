@@ -1,32 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dark War - Hive Planner V2</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=yes">
+    <title>Dark War - Hive Planner Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <style>
-        :root { --primary-bg: #1a1a1a; --header-bg: #2d2d2d; --accent: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--primary-bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        :root { --header-bg: #2d2d2d; --accent: #e74c3c; }
+        body { font-family: sans-serif; background: #111; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; touch-action: none; }
 
-        /* Header Layout */
-        .header { background: var(--header-bg); padding: 10px; border-bottom: 2px solid #444; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        /* Top Menu */
+        .header { background: var(--header-bg); padding: 12px; border-bottom: 2px solid #444; z-index: 1000; }
+        .row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
         
-        .color-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #555; cursor: pointer; }
-        .color-dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px white; }
+        .color-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #555; cursor: pointer; }
+        .active { border-color: white; transform: scale(1.15); box-shadow: 0 0 10px white; }
         
-        input#nameInput { background: #111; border: 1px solid #555; color: white; padding: 10px; border-radius: 6px; width: 120px; font-weight: bold; }
-        
-        button { background: #444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 18px; }
-        .btn-add { background: var(--accent); flex-grow: 1; max-width: 100px; }
-        
-        /* Zoom Slider */
-        .zoom-control { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #aaa; }
+        input#nameInput { background: #1a1a1a; border: 1px solid #555; color: white; padding: 10px; border-radius: 6px; width: 130px; }
+        button { background: #444; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 18px; }
+        .btn-add { background: var(--accent); flex-grow: 1; max-width: 80px; }
 
-        /* Viewport og Canvas */
-        #viewport { flex-grow: 1; overflow: auto; cursor: grab; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+        /* Zoom & Pan Område */
+        #viewport { flex-grow: 1; position: relative; overflow: hidden; background: #000; cursor: grab; }
         #viewport:active { cursor: grabbing; }
 
-        #grid-container { transform-origin: center; transition: transform 0.1s ease-out; padding: 100px; }
+        #container { 
+            position: absolute; 
+            transform-origin: 0 0; 
+            will-change: transform;
+        }
 
         #grid { 
             display: grid; 
@@ -38,19 +38,16 @@
         }
 
         .cell { 
-            width: 40px; height: 40px; background: #1e1e1e; 
+            width: 40px; height: 40px; background: #222; 
             display: flex; align-items: center; justify-content: center;
-            font-size: 10px; font-weight: bold; text-align: center;
-            position: relative; pointer-events: auto;
+            font-size: 10px; font-weight: bold; position: relative;
         }
 
-        /* Elementer */
         .port-overlay { 
-            position: absolute; width: 81px; height: 81px; /* 2x2 plus gap */
+            position: absolute; width: 81px; height: 81px; 
             z-index: 10; display: flex; align-items: center; justify-content: center;
-            padding: 5px; box-sizing: border-box; border: 2px solid rgba(255,255,255,0.4);
-            font-size: 12px; font-weight: 900; color: white; text-shadow: 1px 1px 2px black;
-            pointer-events: none; text-align: center; word-break: break-word;
+            border: 2px solid rgba(255,255,255,0.4); font-size: 11px;
+            pointer-events: none; text-align: center;
         }
     </style>
 </head>
@@ -58,7 +55,8 @@
 
     <div class="header">
         <div class="row">
-            <div class="color-dot active" style="background: #e1c699;" onclick="selectColor('#e1c699', this)"></div> <div class="color-dot" style="background: #222;" onclick="selectColor('#222', this)"></div>
+            <div class="color-dot active" style="background: #e1c699;" onclick="selectColor('#e1c699', this)"></div>
+            <div class="color-dot" style="background: #222;" onclick="selectColor('#222', this)"></div>
             <div class="color-dot" style="background: white;" onclick="selectColor('white', this)"></div>
             <div class="color-dot" style="background: #6b8e23;" onclick="selectColor('#6b8e23', this)"></div>
             <button onclick="undo()">↩️</button>
@@ -66,17 +64,13 @@
             <button style="background:#c0392b" onclick="setTool('delete')">🗑️</button>
         </div>
         <div class="row">
-            <input type="text" id="nameInput" placeholder="Navn...">
+            <input type="text" id="nameInput" placeholder="Name...">
             <button class="btn-add" onclick="setTool('add')">✚ Add</button>
-            <div class="zoom-control">
-                <span>Zoom:</span>
-                <input type="range" min="0.3" max="2" step="0.1" value="1" oninput="updateZoom(this.value)">
-            </div>
         </div>
     </div>
 
     <div id="viewport">
-        <div id="grid-container" id="zoomTarget">
+        <div id="container">
             <div id="grid"></div>
         </div>
     </div>
@@ -86,14 +80,13 @@
         let currentTool = 'add';
         let history = [];
         let redoStack = [];
-        const gridSize = 24;
 
-        // Byg Grid
+        // Opsætning af Grid
         const grid = document.getElementById('grid');
-        for (let i = 0; i < gridSize * gridSize; i++) {
+        for (let i = 0; i < 24 * 24; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
-            cell.onclick = () => handleCellClick(i);
+            cell.onpointerdown = (e) => { if(currentTool !== 'move') handleCellClick(i); };
             grid.appendChild(cell);
         }
 
@@ -101,80 +94,78 @@
             selectedColor = color;
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
             el.classList.add('active');
-            setTool('add');
+            currentTool = 'add';
         }
 
         function setTool(t) { currentTool = t; }
 
-        function updateZoom(val) {
-            document.getElementById('grid-container').style.transform = `scale(${val})`;
-        }
-
         function handleCellClick(index) {
-            const name = document.getElementById('nameInput').value || "Navn";
+            const name = document.getElementById('nameInput').value || "";
             const cell = grid.children[index];
-
-            if (currentTool === 'delete') {
-                saveState();
-                cell.innerHTML = '';
-                return;
-            }
-
+            if (currentTool === 'delete') { saveState(); cell.innerHTML = ''; return; }
             saveState();
             const port = document.createElement('div');
             port.className = 'port-overlay';
             port.style.background = selectedColor;
-            // Skift tekstfarve hvis baggrunden er hvid
             if(selectedColor === 'white') port.style.color = 'black';
-            
             port.innerHTML = `<span>${name}</span>`;
             cell.appendChild(port);
         }
 
-        function saveState() {
-            if (history.length > 20) history.shift();
-            history.push(grid.innerHTML);
-            redoStack = [];
+        function saveState() { history.push(grid.innerHTML); redoStack = []; }
+        function undo() { if (history.length > 0) { redoStack.push(grid.innerHTML); grid.innerHTML = history.pop(); } }
+        function redo() { if (redoStack.length > 0) { history.push(grid.innerHTML); grid.innerHTML = redoStack.pop(); } }
+
+        // --- AVANCERET ZOOM & PAN LOGIK ---
+        const viewport = document.getElementById('viewport');
+        const container = document.getElementById('container');
+
+        let scale = 1, x = 0, y = 0;
+        let p1 = { x: 0, y: 0 }, p2 = { x: 0, y: 0 }, lastDist = 0;
+
+        function updateTransform() {
+            container.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
         }
 
-        function undo() {
-            if (history.length > 0) {
-                redoStack.push(grid.innerHTML);
-                grid.innerHTML = history.pop();
-            }
-        }
-
-        function redo() {
-            if (redoStack.length > 0) {
-                history.push(grid.innerHTML);
-                grid.innerHTML = redoStack.pop();
-            }
-        }
-
-        // Gør det muligt at trække rundt med mus/finger
-        const slider = document.getElementById('viewport');
-        let isDown = false;
-        let startX, startY, scrollLeft, scrollTop;
-
-        slider.addEventListener('mousedown', (e) => {
-            isDown = true;
-            startX = e.pageX - slider.offsetLeft;
-            startY = e.pageY - slider.offsetTop;
-            scrollLeft = slider.scrollLeft;
-            scrollTop = slider.scrollTop;
-        });
-        slider.addEventListener('mouseleave', () => isDown = false);
-        slider.addEventListener('mouseup', () => isDown = false);
-        slider.addEventListener('mousemove', (e) => {
-            if(!isDown) return;
+        // Computer (Mus)
+        viewport.onwheel = (e) => {
             e.preventDefault();
-            const x = e.pageX - slider.offsetLeft;
-            const walkX = (x - startX);
-            const y = e.pageY - slider.offsetTop;
-            const walkY = (y - startY);
-            slider.scrollLeft = scrollLeft - walkX;
-            slider.scrollTop = scrollTop - walkY;
-        });
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            scale *= delta;
+            scale = Math.min(Math.max(0.2, scale), 4);
+            updateTransform();
+        };
+
+        // Mobil (Touch)
+        viewport.ontouchmove = (e) => {
+            if (e.touches.length === 1) { // Flyt (Pan)
+                if (!p1.x) { p1 = { x: e.touches[0].clientX, y: e.touches[0].clientY }; return; }
+                x += e.touches[0].clientX - p1.x;
+                y += e.touches[0].clientY - p1.y;
+                p1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2) { // Zoom (Pinch)
+                const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                if (lastDist) scale *= (d / lastDist);
+                lastDist = d;
+            }
+            updateTransform();
+        };
+
+        viewport.ontouchend = () => { p1 = { x: 0, y: 0 }; lastDist = 0; };
+        
+        // Mus Drag (Pan)
+        let isDragging = false;
+        viewport.onmousedown = (e) => { if(e.button === 0) { isDragging = true; p1 = { x: e.clientX, y: e.clientY }; } };
+        window.onmousemove = (e) => {
+            if (!isDragging) return;
+            x += e.clientX - p1.x;
+            y += e.clientY - p1.y;
+            p1 = { x: e.clientX, y: e.clientY };
+            updateTransform();
+        };
+        window.onmouseup = () => isDragging = false;
+
+        updateTransform();
     </script>
 </body>
 </html>
