@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Lockable Terrain</title>
+    <title>Dark War - Professional Map Maker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
             --bg-color: #d8a06f; 
-            --port-teal-blue: #145a82;   
-            --port-muted-orange: #b35a00; 
-            --glow-blue-dark: rgba(20, 90, 130, 0.45); 
-            --glow-orange-dark: rgba(179, 90, 0, 0.45); 
-            --world-dark-grey: #454d55; 
+            --port-blue: #145a82;   
+            --port-orange: #b35a00; 
+            --shelter-blue: #0a3d59; /* Darker variant */
+            --shelter-orange: #8a4500; /* Darker variant */
+            --glow-blue: rgba(20, 90, 130, 0.45); 
+            --glow-orange: rgba(179, 90, 0, 0.45); 
+            --world-grey: #454d55; 
             --panel: #2d2d2d; 
             --grid-line: rgba(0,0,0,0.15); 
         }
@@ -32,10 +34,10 @@
         #grid { width:100%; height:100%; background-size: 20px 20px; background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px); }
 
         .obj { 
-            position:absolute; display:flex; align-items:center; justify-content:center; 
-            font-size:8px; font-weight: 400; color: #fff !important; 
+            position:absolute; display:flex; flex-direction: column; align-items:center; justify-content:center; 
+            font-size:8px; font-weight: 600; color: #fff !important; 
             text-align:center; line-height: 1.1; box-sizing: border-box; z-index:10; 
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.3) !important; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); 
             outline: 1px solid rgba(255,255,255,0.15); outline-offset: -1px;
         }
         
@@ -43,13 +45,15 @@
         .zone.locked { filter: grayscale(1) opacity(0.7); pointer-events: none; }
         
         .port { width:40px; height:40px; }
-        .tile-blue { width:20px; height:20px; background: var(--glow-blue-dark); outline-color: var(--port-teal-blue); }
-        .tile-orange { width:20px; height:20px; background: var(--glow-orange-dark); outline-color: var(--port-muted-orange); }
-        .pyramid { width:140px; height:140px; background: var(--world-dark-grey); font-size: 11px; } 
-        .oasis { width:100px; height:100px; background: var(--world-dark-grey); font-size: 10px; } 
-        .stronghold { width:100px; height:100px; background: var(--world-dark-grey); font-size: 9px; } 
+        .port::before { content: "PORT"; font-size: 7px; opacity: 0.9; margin-bottom: 1px; }
 
-        .dragging { opacity: 0.8; z-index: 1000 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .shelter { width:60px; height:60px; font-size: 9px; border: 1px solid rgba(255,255,255,0.2); }
+        
+        .tile-blue { width:20px; height:20px; background: var(--glow-blue); outline-color: var(--port-blue); }
+        .tile-orange { width:20px; height:20px; background: var(--glow-orange); outline-color: var(--port-orange); }
+        .pyramid { width:140px; height:140px; background: var(--world-grey); font-size: 11px; } 
+
+        .dragging { opacity: 0.8; z-index: 1000 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.5); scale: 1.05; }
         #modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2000; display:none; align-items:center; justify-content:center; }
         .m-box { background:#333; padding:20px; border-radius:10px; width:85%; max-width: 300px; display:flex; flex-direction:column; gap:12px; color: white; }
     </style>
@@ -57,10 +61,10 @@
 <body>
     <div class="controls">
         <div class="row">
-            <div class="color-btn active" style="background:var(--port-teal-blue)" onclick="selectType('port', 'var(--port-teal-blue)', this)"></div>
-            <div class="color-btn" style="background:var(--port-muted-orange)" onclick="selectType('port', 'var(--port-muted-orange)', this)"></div>
-            <div class="color-btn" style="border: 1px solid var(--port-teal-blue); background:var(--glow-blue-dark);" onclick="selectType('tile-blue', 'var(--glow-blue-dark)', this)"></div>
-            <div class="color-btn" style="border: 1px solid var(--port-muted-orange); background:var(--glow-orange-dark);" onclick="selectType('tile-orange', 'var(--glow-orange-dark)', this)"></div>
+            <div class="color-btn active" style="background:var(--port-blue)" onclick="selectType('port', 'var(--port-blue)', this)"></div>
+            <div class="color-btn" style="background:var(--port-orange)" onclick="selectType('port', 'var(--port-orange)', this)"></div>
+            <div class="color-btn" style="border: 1px solid var(--port-blue); background:var(--glow-blue);" onclick="selectType('tile-blue', 'var(--glow-blue)', this)"></div>
+            <div class="color-btn" style="border: 1px solid var(--port-orange); background:var(--glow-orange);" onclick="selectType('tile-orange', 'var(--glow-orange)', this)"></div>
             
             <div class="button-group" style="align-items: center;">
                 <div class="color-btn" style="background:rgba(0,0,0,0.6);" onclick="selectType('zone', '', this)"></div>
@@ -76,7 +80,10 @@
                 <button onclick="redo()">↪️</button>
             </div>
             <button onclick="addSpecial('pyramid', 'PYRAMID')">🏜️</button>
-            <input type="text" id="pIn" placeholder="Name..." style="flex:1">
+            <button onclick="addSpecial('shelter', '', 'var(--shelter-blue)')" style="background:var(--shelter-blue)">🏠 B</button>
+            <button onclick="addSpecial('shelter', '', 'var(--shelter-orange)')" style="background:var(--shelter-orange)">🏠 O</button>
+            
+            <input type="text" id="pIn" placeholder="Enter Label..." style="flex:1">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
             <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
@@ -85,29 +92,24 @@
     <div id="viewport"><div id="zoom-layer"><div id="grid"></div></div></div>
 
     <div id="modal"><div class="m-box">
-        <h3 style="margin:0">Edit Object</h3>
+        <h3 style="margin:0">Edit Label</h3>
         <input type="text" id="eIn">
         <div class="row">
             <button onclick="saveE()" style="background:#27ae60; flex:1">Save</button>
             <button onclick="delI()" style="background:#c0392b">Delete</button>
-            <button onclick="closeM()">X</button>
+            <button onclick="closeM()">Cancel</button>
         </div>
     </div></div>
 
     <script>
         const zl = document.getElementById('zoom-layer'), gd = document.getElementById('grid'), vp = document.getElementById('viewport');
-        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = 'var(--port-teal-blue)', terrainLocked = false;
+        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = 'var(--port-blue)', terrainLocked = false;
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
-        // Optimized Export: Mini-format
         function exportMap() {
             const data = Array.from(document.querySelectorAll('.obj')).map(el => ({
-                n: el.innerText,
-                t: el.dataset.t,
-                c: el.style.backgroundColor,
-                x: parseInt(el.style.left),
-                y: parseInt(el.style.top)
+                n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, x: parseInt(el.style.left), y: parseInt(el.style.top)
             }));
             prompt("Export Code:", btoa(JSON.stringify(data)));
         }
@@ -149,11 +151,12 @@
             const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top) }));
             history.push(JSON.stringify(data));
             if (clearRedo) redoStack = [];
-            localStorage.setItem('dw_lock_save', JSON.stringify(data));
+            localStorage.setItem('dw_final_v5', JSON.stringify(data));
         }
 
         function isAreaBlocked(x, y, type) {
-            const size = (type === 'port') ? 40 : (type === 'pyramid' ? 140 : (type === 'oasis' || type === 'stronghold' ? 100 : 20));
+            const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'zone': 20, 'tile-blue': 20, 'tile-orange': 20 };
+            const size = sizeMap[type] || 20;
             const zones = Array.from(document.querySelectorAll('.zone'));
             for (let ox = 0; ox < size; ox += 20) {
                 for (let oy = 0; oy < size; oy += 20) {
@@ -163,7 +166,7 @@
             return false;
         }
 
-        function addSpecial(type, name) { addI({ n: name, t: type, c: "", l: null, top: null }); }
+        function addSpecial(type, name, color = null) { addI({ n: name, t: type, c: color || "", l: null, top: null }); }
 
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
@@ -177,8 +180,12 @@
             dv.className = `obj ${type}`;
             if (type === 'zone' && terrainLocked) dv.classList.add('locked');
             dv.dataset.t = type;
-            if (d ? d.c : curColor) dv.style.backgroundColor = d ? d.c : curColor;
-            dv.innerText = (type === 'zone') ? "" : (d ? d.n : (document.getElementById('pIn').value || ""));
+            dv.style.backgroundColor = d ? d.c : (type === 'zone' ? '' : curColor);
+            
+            // Text logic: Handle "PORT" + Custom Name
+            const nameInput = document.getElementById('pIn').value;
+            dv.innerText = (type === 'zone') ? "" : (d ? d.n : nameInput);
+            
             dv.style.left = x + "px"; dv.style.top = y + "px";
             
             makeD(dv);
@@ -212,14 +219,14 @@
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
         function delI() { if(confirm("Delete?")) { cur.remove(); saveState(); closeM(); } }
-        function clearAll() { if(confirm("Clear Map?")) { localStorage.removeItem('dw_lock_save'); location.reload(); } }
+        function clearAll() { if(confirm("Clear Map?")) { localStorage.removeItem('dw_final_v5'); location.reload(); } }
         
         function undo() { if (history.length <= 1) return; redoStack.push(history.pop()); render(JSON.parse(history[history.length - 1])); }
         function redo() { if (redoStack.length === 0) return; const state = redoStack.pop(); history.push(state); render(JSON.parse(state)); }
         function render(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
         window.onload = () => { 
-            const d = localStorage.getItem('dw_lock_save'); 
+            const d = localStorage.getItem('dw_final_v5'); 
             if (d) { history.push(d); render(JSON.parse(d)); } else history.push("[]");
             updateTransform();
         };
