@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Fixed Edition</title>
+    <title>Dark War - Final Fix</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -43,7 +43,6 @@
         .port::before { content: "PORTAL"; font-size: 6px; margin-bottom: 1px; }
         .shelter { width:60px; height:60px; }
         
-        /* Special labels */
         .pyramid { width:140px; height:140px; background: var(--world-grey); }
         .pyramid::before { content: "PYRAMID"; }
         .stronghold { width:100px; height:100px; background: var(--world-grey); }
@@ -101,13 +100,11 @@
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
-        // Funktion til at tjekke om et område er blokeret af grå tiles (Zone)
         function isBlocked(x, y, type) {
             if (type === 'zone') return false;
             const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'stronghold': 100, 'oasis': 80, 'tile-blue': 20, 'tile-orange': 20 };
             const size = sizeMap[type] || 20;
             const zones = Array.from(document.querySelectorAll('.zone'));
-            
             for (let ox = 0; ox < size; ox += 20) {
                 for (let oy = 0; oy < size; oy += 20) {
                     if (zones.some(z => parseInt(z.style.left) === x + ox && parseInt(z.style.top) === y + oy)) return true;
@@ -136,18 +133,14 @@
             } catch (e) { alert("Fejl!"); }
         }
 
-        // Hammer.js til Zoom og Pan
         const hm = new Hammer(vp);
         hm.get('pinch').set({ enable: true });
         let startSc, startPx, startPy, cX, cY;
-
         hm.on('pinchstart', (e) => { startSc = sc; startPx = px; startPy = py; cX = e.center.x; cY = e.center.y; });
         hm.on('pinchmove', (e) => {
             const newSc = Math.max(0.1, Math.min(startSc * e.scale, 5));
             const ratio = newSc / startSc;
-            px = cX - (cX - startPx) * ratio;
-            py = cY - (cY - startPy) * ratio;
-            sc = newSc;
+            px = cX - (cX - startPx) * ratio; py = cY - (cY - startPy) * ratio; sc = newSc;
             updateTransform();
         });
         hm.on('panmove', (e) => { if (e.target === gd || e.target === vp) zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
@@ -162,13 +155,16 @@
             localStorage.setItem('dw_final_save', JSON.stringify(data));
         }
 
-        function addSpecial(type, name, color = null) { addI({ n: name, t: type, c: color || "", l: null, top: null }); }
+        // RETTET: addSpecial kalder nu addI uden faste 0,0 koordinater
+        function addSpecial(type, name, color = null) { 
+            addI({ n: name, t: type, c: color || "", l: null, top: null }); 
+        }
 
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
-            // Placer i midten af skærmen hvis det er manuel tilføjelse
-            const rawX = d ? d.l : (window.innerWidth/2 - px)/sc - 20;
-            const rawY = d ? d.top : (window.innerHeight/2 - py)/sc - 20;
+            // Beregn midten af skærmen baseret på nuværende zoom og pan
+            const rawX = (d && d.l !== null) ? d.l : (window.innerWidth/2 - px)/sc - 20;
+            const rawY = (d && d.top !== null) ? d.top : (window.innerHeight/2 - py)/sc - 20;
             const x = Math.round(rawX/20)*20, y = Math.round(rawY/20)*20;
 
             if (!d && isBlocked(x, y, type)) { alert("Område blokeret!"); return; }
