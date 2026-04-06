@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Portal Edition</title>
+    <title>Dark War - Ultra Compact</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -44,9 +44,8 @@
         .zone { width:20px; height:20px; background: rgba(0,0,0,0.35); outline: none; z-index: 5; }
         .zone.locked { filter: grayscale(1) opacity(0.7); pointer-events: none; }
         
-        /* Updated PORT to PORTAL */
         .port { width:40px; height:40px; }
-        .port::before { content: "PORTAL"; font-size: 6.5px; opacity: 0.9; margin-bottom: 1px; letter-spacing: 0.2px; }
+        .port::before { content: "PORTAL"; font-size: 6.5px; opacity: 0.9; margin-bottom: 1px; }
 
         .shelter { width:60px; height:60px; font-size: 9px; border: 1px solid rgba(255,255,255,0.2); }
         
@@ -84,7 +83,7 @@
             <button onclick="addSpecial('shelter', '', 'var(--shelter-blue)')" style="background:var(--shelter-blue)">🏠 B</button>
             <button onclick="addSpecial('shelter', '', 'var(--shelter-orange)')" style="background:var(--shelter-orange)">🏠 O</button>
             
-            <input type="text" id="pIn" placeholder="Enter Label..." style="flex:1">
+            <input type="text" id="pIn" placeholder="Label..." style="flex:1">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
             <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
@@ -108,11 +107,26 @@
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
-        function exportMap() {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({
-                n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, x: parseInt(el.style.left), y: parseInt(el.style.top)
-            }));
-            prompt("Export Code:", btoa(JSON.stringify(data)));
+        // Mapping for ultra-short codes
+        const typeMap = { 'port': 'p', 'shelter': 's', 'pyramid': 'y', 'zone': 'z', 'tile-blue': 'b', 'tile-orange': 'o' };
+        const revTypeMap = Object.fromEntries(Object.entries(typeMap).map(([k, v]) => [v, k]));
+
+        async function exportMap() {
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => [
+                el.innerText, 
+                typeMap[el.dataset.t] || el.dataset.t, 
+                el.style.backgroundColor, 
+                parseInt(el.style.left), 
+                parseInt(el.style.top)
+            ]);
+            const code = btoa(JSON.stringify(data));
+            
+            try {
+                await navigator.clipboard.writeText(code);
+                alert("Code copied to clipboard! (Compressed)");
+            } catch (err) {
+                prompt("Copy code manually:", code);
+            }
         }
 
         function importMap() {
@@ -121,7 +135,9 @@
             try {
                 const decoded = JSON.parse(atob(code));
                 gd.innerHTML = "";
-                decoded.forEach(i => addI({ n: i.n, t: i.t, c: i.c, l: i.x, top: i.y }, false));
+                decoded.forEach(i => {
+                    addI({ n: i[0], t: revTypeMap[i[1]] || i[1], c: i[2], l: i[3], top: i[4] }, false);
+                });
                 saveState();
             } catch (e) { alert("Invalid code!"); }
         }
@@ -152,7 +168,7 @@
             const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top) }));
             history.push(JSON.stringify(data));
             if (clearRedo) redoStack = [];
-            localStorage.setItem('dw_portal_save', JSON.stringify(data));
+            localStorage.setItem('dw_ultra_save', JSON.stringify(data));
         }
 
         function isAreaBlocked(x, y, type) {
@@ -182,9 +198,7 @@
             if (type === 'zone' && terrainLocked) dv.classList.add('locked');
             dv.dataset.t = type;
             dv.style.backgroundColor = d ? d.c : (type === 'zone' ? '' : curColor);
-            
-            const nameInput = document.getElementById('pIn').value;
-            dv.innerText = (type === 'zone') ? "" : (d ? d.n : nameInput);
+            dv.innerText = (type === 'zone') ? "" : (d ? d.n : (document.getElementById('pIn').value || ""));
             dv.style.left = x + "px"; dv.style.top = y + "px";
             
             makeD(dv);
@@ -218,14 +232,14 @@
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
         function delI() { if(confirm("Delete?")) { cur.remove(); saveState(); closeM(); } }
-        function clearAll() { if(confirm("Clear Map?")) { localStorage.removeItem('dw_portal_save'); location.reload(); } }
+        function clearAll() { if(confirm("Clear Map?")) { localStorage.removeItem('dw_ultra_save'); location.reload(); } }
         
         function undo() { if (history.length <= 1) return; redoStack.push(history.pop()); render(JSON.parse(history[history.length - 1])); }
         function redo() { if (redoStack.length === 0) return; const state = redoStack.pop(); history.push(state); render(JSON.parse(state)); }
         function render(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
         window.onload = () => { 
-            const d = localStorage.getItem('dw_portal_save'); 
+            const d = localStorage.getItem('dw_ultra_save'); 
             if (d) { history.push(d); render(JSON.parse(d)); } else history.push("[]");
             updateTransform();
         };
