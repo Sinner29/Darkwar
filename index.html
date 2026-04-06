@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Final Fix</title>
+    <title>Dark War - English Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -77,9 +77,9 @@
             <button onclick="addSpecial('oasis', '')">💧 Oas</button>
             <button onclick="addSpecial('shelter', '', 'var(--shelter-blue)')" style="background:var(--shelter-blue)">🏠 B</button>
             <button onclick="addSpecial('shelter', '', 'var(--shelter-orange)')" style="background:var(--shelter-orange)">🏠 O</button>
-            <input type="text" id="pIn" placeholder="Navn..." style="width:60px">
+            <input type="text" id="pIn" placeholder="Label..." style="width:60px">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
-            <button onclick="clearAll()" style="background:#c0392b">Ryd</button>
+            <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
     </div>
 
@@ -88,8 +88,8 @@
     <div id="modal"><div class="m-box">
         <input type="text" id="eIn">
         <div class="row">
-            <button onclick="saveE()" style="background:#27ae60">Gem</button>
-            <button onclick="delI()" style="background:#c0392b">Slet</button>
+            <button onclick="saveE()" style="background:#27ae60">Save</button>
+            <button onclick="delI()" style="background:#c0392b">Delete</button>
             <button onclick="closeM()">X</button>
         </div>
     </div></div>
@@ -119,18 +119,18 @@
             }));
             const code = btoa(JSON.stringify(data));
             await navigator.clipboard.writeText(code);
-            alert("Kopieret!");
+            alert("Export code copied to clipboard!");
         }
 
         function importMap() {
-            const code = prompt("Indsæt kode:");
+            const code = prompt("Paste your export code here:");
             if (!code) return;
             try {
                 const decoded = JSON.parse(atob(code));
                 gd.innerHTML = "";
                 decoded.forEach(i => addI({ n: i.n, t: i.t, c: i.c, l: i.x, top: i.y }, false));
                 saveState();
-            } catch (e) { alert("Fejl!"); }
+            } catch (e) { alert("Invalid code!"); }
         }
 
         const hm = new Hammer(vp);
@@ -140,7 +140,7 @@
         hm.on('pinchmove', (e) => {
             const newSc = Math.max(0.1, Math.min(startSc * e.scale, 5));
             const ratio = newSc / startSc;
-            px = cX - (cX - startPx) * ratio; py = cY - (cY - startPy) * ratio; sc = newSc;
+            px = cX - (cX - startPx) * ratio; py = cY - (centerY - startPy) * ratio; sc = newSc;
             updateTransform();
         });
         hm.on('panmove', (e) => { if (e.target === gd || e.target === vp) zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
@@ -155,19 +155,17 @@
             localStorage.setItem('dw_final_save', JSON.stringify(data));
         }
 
-        // RETTET: addSpecial kalder nu addI uden faste 0,0 koordinater
         function addSpecial(type, name, color = null) { 
             addI({ n: name, t: type, c: color || "", l: null, top: null }); 
         }
 
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
-            // Beregn midten af skærmen baseret på nuværende zoom og pan
             const rawX = (d && d.l !== null) ? d.l : (window.innerWidth/2 - px)/sc - 20;
             const rawY = (d && d.top !== null) ? d.top : (window.innerHeight/2 - py)/sc - 20;
             const x = Math.round(rawX/20)*20, y = Math.round(rawY/20)*20;
 
-            if (!d && isBlocked(x, y, type)) { alert("Område blokeret!"); return; }
+            if (!d && isBlocked(x, y, type)) { alert("Area blocked!"); return; }
 
             const dv = document.createElement('div');
             dv.className = `obj ${type}`;
@@ -211,7 +209,7 @@
         function closeM() { document.getElementById('modal').style.display = 'none'; }
         function saveE() { cur.innerText = document.getElementById('eIn').value; saveState(); closeM(); }
         function delI() { cur.remove(); saveState(); closeM(); }
-        function clearAll() { if(confirm("Ryd alt?")) { gd.innerHTML = ""; saveState(); } }
+        function clearAll() { if(confirm("Clear everything?")) { gd.innerHTML = ""; saveState(); } }
 
         window.onload = () => { 
             const d = localStorage.getItem('dw_final_save'); 
