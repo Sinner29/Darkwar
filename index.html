@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - English Edition</title>
+    <title>Dark War - Fixed Zoom English</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -140,7 +140,9 @@
         hm.on('pinchmove', (e) => {
             const newSc = Math.max(0.1, Math.min(startSc * e.scale, 5));
             const ratio = newSc / startSc;
-            px = cX - (cX - startPx) * ratio; py = cY - (centerY - startPy) * ratio; sc = newSc;
+            px = cX - (cX - startPx) * ratio; 
+            py = cY - (cY - startPy) * ratio; // Fixed: using cY instead of centerY
+            sc = newSc;
             updateTransform();
         });
         hm.on('panmove', (e) => { if (e.target === gd || e.target === vp) zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
