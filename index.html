@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Fixed Zoom English</title>
+    <title>Dark War - Oasis Resize</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -12,8 +12,6 @@
             --port-orange: #b35a00; 
             --shelter-blue: #0a3d59; 
             --shelter-orange: #8a4500; 
-            --glow-blue: rgba(20, 90, 130, 0.45); 
-            --glow-orange: rgba(179, 90, 0, 0.45); 
             --world-grey: #454d55; 
             --panel: #2d2d2d; 
             --grid-line: rgba(0,0,0,0.15); 
@@ -47,11 +45,12 @@
         .pyramid::before { content: "PYRAMID"; }
         .stronghold { width:100px; height:100px; background: var(--world-grey); }
         .stronghold::before { content: "STRONGHOLD"; }
-        .oasis { width:80px; height:80px; background: var(--world-grey); }
+        /* Oasis nu rettet til 100px (25 tiles) */
+        .oasis { width:100px; height:100px; background: var(--world-grey); }
         .oasis::before { content: "OASIS"; }
 
-        .tile-blue { width:20px; height:20px; background: var(--glow-blue); }
-        .tile-orange { width:20px; height:20px; background: var(--glow-orange); }
+        .tile-blue { width:20px; height:20px; background: rgba(20, 90, 130, 0.45); }
+        .tile-orange { width:20px; height:20px; background: rgba(179, 90, 0, 0.45); }
 
         #modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2000; display:none; align-items:center; justify-content:center; }
         .m-box { background:#333; padding:20px; border-radius:10px; color: white; display:flex; flex-direction:column; gap:10px; }
@@ -60,10 +59,10 @@
 <body>
     <div class="controls">
         <div class="row">
-            <div class="color-btn active" style="background:var(--port-blue)" onclick="selectType('port', 'var(--port-blue)', this)"></div>
-            <div class="color-btn" style="background:var(--port-orange)" onclick="selectType('port', 'var(--port-orange)', this)"></div>
-            <div class="color-btn" style="background:var(--glow-blue); border:1px solid var(--port-blue)" onclick="selectType('tile-blue', 'var(--glow-blue)', this)"></div>
-            <div class="color-btn" style="background:var(--glow-orange); border:1px solid var(--port-orange)" onclick="selectType('tile-orange', 'var(--glow-orange)', this)"></div>
+            <div class="color-btn active" style="background:#145a82" onclick="selectType('port', '#145a82', this)"></div>
+            <div class="color-btn" style="background:#b35a00" onclick="selectType('port', '#b35a00', this)"></div>
+            <div class="color-btn" style="background:rgba(20, 90, 130, 0.45); border:1px solid #145a82" onclick="selectType('tile-blue', 'rgba(20, 90, 130, 0.45)', this)"></div>
+            <div class="color-btn" style="background:rgba(179, 90, 0, 0.45); border:1px solid #b35a00" onclick="selectType('tile-orange', 'rgba(179, 90, 0, 0.45)', this)"></div>
             <div class="color-btn" style="background:rgba(0,0,0,0.6);" onclick="selectType('zone', '', this)"></div>
             <button id="lockBtn" onclick="toggleLock()" style="background:#27ae60">🔓 Lock</button>
             <button onclick="exportMap()" style="background:#8e44ad">📤 Export</button>
@@ -75,8 +74,8 @@
             <button onclick="addSpecial('pyramid', '')">🏜️ Pyr</button>
             <button onclick="addSpecial('stronghold', '')">🏰 Str</button>
             <button onclick="addSpecial('oasis', '')">💧 Oas</button>
-            <button onclick="addSpecial('shelter', '', 'var(--shelter-blue)')" style="background:var(--shelter-blue)">🏠 B</button>
-            <button onclick="addSpecial('shelter', '', 'var(--shelter-orange)')" style="background:var(--shelter-orange)">🏠 O</button>
+            <button onclick="addSpecial('shelter', '', '#0a3d59')" style="background:#0a3d59">🏠 B</button>
+            <button onclick="addSpecial('shelter', '', '#8a4500')" style="background:#8a4500">🏠 O</button>
             <input type="text" id="pIn" placeholder="Label..." style="width:60px">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
             <button onclick="clearAll()" style="background:#c0392b">Clear</button>
@@ -96,13 +95,13 @@
 
     <script>
         const zl = document.getElementById('zoom-layer'), gd = document.getElementById('grid'), vp = document.getElementById('viewport');
-        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = 'var(--port-blue)', terrainLocked = false;
+        let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = '#145a82', terrainLocked = false;
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
         function isBlocked(x, y, type) {
             if (type === 'zone') return false;
-            const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'stronghold': 100, 'oasis': 80, 'tile-blue': 20, 'tile-orange': 20 };
+            const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'stronghold': 100, 'oasis': 100, 'tile-blue': 20, 'tile-orange': 20 };
             const size = sizeMap[type] || 20;
             const zones = Array.from(document.querySelectorAll('.zone'));
             for (let ox = 0; ox < size; ox += 20) {
@@ -141,7 +140,7 @@
             const newSc = Math.max(0.1, Math.min(startSc * e.scale, 5));
             const ratio = newSc / startSc;
             px = cX - (cX - startPx) * ratio; 
-            py = cY - (cY - startPy) * ratio; // Fixed: using cY instead of centerY
+            py = cY - (cY - startPy) * ratio; 
             sc = newSc;
             updateTransform();
         });
