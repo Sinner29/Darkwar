@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Short Code Version</title>
+    <title>Dark War - Persistent Text</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -93,7 +93,6 @@
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
-        // EKSPORT FUNKTION (FORKORTET)
         async function exportMap() {
             const data = Array.from(document.querySelectorAll('.obj')).map(el => [
                 el.innerText, el.dataset.t, el.style.backgroundColor, parseInt(el.style.left), parseInt(el.style.top)
@@ -178,7 +177,11 @@
             makeD(dv);
             let lt = 0; dv.addEventListener('touchend', () => { if(Date.now() - lt < 300) openM(dv); lt = Date.now(); });
             gd.appendChild(dv); 
-            if (s) { saveState(); document.getElementById('pIn').value = ""; }
+            if (s) { 
+                saveState(); 
+                // Linjen herunder er fjernet, så teksten ikke bliver slettet!
+                // document.getElementById('pIn').value = ""; 
+            }
         }
 
         function makeD(el) {
