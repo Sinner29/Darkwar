@@ -3,15 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Original Zoom & History</title>
+    <title>Dark War - Fixed & Original</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
             --bg-color: #d8a06f; 
-            --port-blue: #145a82;   
-            --port-orange: #b35a00; 
-            --shelter-blue: #0a3d59; 
-            --shelter-orange: #8a4500; 
             --world-grey: #454d55; 
             --panel: #2d2d2d; 
             --grid-line: rgba(0,0,0,0.15); 
@@ -23,11 +19,11 @@
         
         input, button { padding:8px 10px; border-radius:4px; border:none; font-size:11px; background:#444; color:white; cursor: pointer; }
         
-        /* Knapper til valg - Cirkler for Port, Firkanter for Shelter */
+        /* Knapper til valg */
         .color-btn { width: 30px; height: 30px; border: 2px solid transparent; cursor: pointer; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; }
         .color-btn.active { border-color: white; }
-        .is-p { border-radius: 50%; }
-        .is-s { border-radius: 4px; }
+        .is-p { border-radius: 50%; } /* Cirkel for Portal */
+        .is-s { border-radius: 4px; } /* Firkant for Shelter */
 
         #viewport { width:100vw; height:100vh; position:relative; background: var(--bg-color); overflow: hidden; }
         #zoom-layer { position:absolute; transform-origin: 0 0; width:5000px; height:5000px; will-change: transform; }
@@ -77,10 +73,10 @@
         <div class="row">
             <button onclick="undo()">↩️</button>
             <button onclick="redo()">↪️</button>
-            <button onclick="addSpecial('pyramid', 'PYR')">🏜️ Pyr</button>
-            <button onclick="addSpecial('stronghold', 'STR')">🏰 Str</button>
-            <button onclick="addSpecial('oasis', 'OAS')">💧 Oas</button>
-            <input type="text" id="pIn" placeholder="Navn..." style="width:70px">
+            <button onclick="addSpecial('pyramid', '')">🏜️ Pyr</button>
+            <button onclick="addSpecial('stronghold', '')">🏰 Str</button>
+            <button onclick="addSpecial('oasis', '')">💧 Oas</button>
+            <input type="text" id="pIn" placeholder="Navn..." style="width:80px">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
             <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
@@ -102,51 +98,8 @@
         let sc = 1.0, px = 0, py = 0, history = [], redoStack = [], curType = 'port', curColor = '#145a82', terrainLocked = false;
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
-        const getLet = (x) => String.fromCharCode(65 + Math.floor(x / 200));
 
-        // DIN ORIGINALE ISBLOCKED
-        function isBlocked(x, y, type) {
-            if (type === 'zone') return false;
-            const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'stronghold': 100, 'oasis': 100, 'tile-blue': 20, 'tile-orange': 20 };
-            const size = sizeMap[type] || 20;
-            const zones = Array.from(document.querySelectorAll('.zone'));
-            for (let ox = 0; ox < size; ox += 20) {
-                for (let oy = 0; oy < size; oy += 20) {
-                    if (zones.some(z => parseInt(z.style.left) === x + ox && parseInt(z.style.top) === y + oy)) return true;
-                }
-            }
-            return false;
-        }
-
-        // NY HIVE-STYLE EKSPORT (Kortere og læsbar)
-        async function exportMap() {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => {
-                const x = parseInt(el.style.left);
-                const y = parseInt(el.style.top);
-                return `${getLet(x)}${Math.round(x/20)},${Math.round(y/20)},${el.innerText || ''}|${el.dataset.t}|${el.style.backgroundColor}`;
-            });
-            await navigator.clipboard.writeText(data.join(';'));
-            alert("Kort Hive-kode kopieret!");
-        }
-
-        function importMap() {
-            const code = prompt("Indsæt kode:");
-            if (!code) return;
-            try {
-                gd.innerHTML = "";
-                code.split(';').forEach(item => {
-                    const p = item.split(',');
-                    if (p.length < 3) return;
-                    const x = parseInt(p[0].replace(/^\D+/g, '')) * 20;
-                    const y = parseInt(p[1]) * 20;
-                    const meta = p[2].split('|');
-                    addI({ n: meta[0], t: meta[1]||'port', c: meta[2]||'#145a82', l: x, top: y }, false);
-                });
-                saveState();
-            } catch (e) { alert("Fejl i kode!"); }
-        }
-
-        // DIN ORIGINALE ZOOM (Hammer.js)
+        // DIN RIGTIGE ZOOM FUNKTION
         const hm = new Hammer(vp);
         hm.get('pinch').set({ enable: true });
         let startSc, startPx, startPy, cX, cY;
@@ -162,9 +115,13 @@
         hm.on('panmove', (e) => { if (e.target === gd || e.target === vp) zl.style.transform = `translate(${px + e.deltaX}px, ${py + e.deltaY}px) scale(${sc})`; });
         hm.on('panend', (e) => { if (e.target === gd || e.target === vp) { px += e.deltaX; py += e.deltaY; updateTransform(); } });
 
-        function selectType(t, c, el) { curType = t; curColor = c; document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
+        function selectType(t, c, el) { 
+            curType = t; curColor = c; 
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active')); 
+            el.classList.add('active'); 
+        }
 
-        // DIN ORIGINALE HISTORIK (Undo/Redo)
+        // DIN RIGTIGE UNDO/REDO LOGIK
         function saveState(clearRedo = true) {
             const data = Array.from(document.querySelectorAll('.obj')).map(el => ({ n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top) }));
             history.push(JSON.stringify(data));
@@ -176,11 +133,42 @@
         function redo() { if (redoStack.length === 0) return; const state = redoStack.pop(); history.push(state); render(JSON.parse(state)); }
         function render(data) { gd.innerHTML = ""; data.forEach(i => addI(i, false)); }
 
-        function addSpecial(type, name, color = null) { 
-            addI({ n: name, t: type, c: color || "", l: null, top: null }); 
+        // EKSPORT/IMPORT DER VIRKER MED DIT FORMAT
+        async function exportMap() {
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({
+                n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, l: parseInt(el.style.left), top: parseInt(el.style.top)
+            }));
+            const code = btoa(JSON.stringify(data));
+            await navigator.clipboard.writeText(code);
+            alert("Koden er kopieret!");
         }
 
-        // DIN ORIGINALE ADDI
+        function importMap() {
+            const code = prompt("Indsæt kode:");
+            if (!code) return;
+            try {
+                const decoded = JSON.parse(atob(code));
+                gd.innerHTML = "";
+                decoded.forEach(i => addI(i, false));
+                saveState();
+            } catch (e) { alert("Ugyldig kode!"); }
+        }
+
+        function isBlocked(x, y, type) {
+            if (type === 'zone') return false;
+            const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'stronghold': 100, 'oasis': 100, 'tile-blue': 20, 'tile-orange': 20 };
+            const size = sizeMap[type] || 20;
+            const zones = Array.from(document.querySelectorAll('.zone'));
+            for (let ox = 0; ox < size; ox += 20) {
+                for (let oy = 0; oy < size; oy += 20) {
+                    if (zones.some(z => parseInt(z.style.left) === x + ox && parseInt(z.style.top) === y + oy)) return true;
+                }
+            }
+            return false;
+        }
+
+        function addSpecial(type, name) { addI({ n: name, t: type, c: "", l: null, top: null }); }
+
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
             const rawX = (d && d.l !== null) ? d.l : (window.innerWidth/2 - px)/sc - 20;
@@ -202,7 +190,6 @@
             if (s) { saveState(); document.getElementById('pIn').value = ""; }
         }
 
-        // DIN ORIGINALE MAKED (Drag)
         function makeD(el) {
             let a = false, ox, oy, startX, startY;
             el.addEventListener("touchstart", (e) => { 
