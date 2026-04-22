@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Persistent Text</title>
+    <title>Dark War - Persistent Text (Fixed Special Labels)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -41,8 +41,10 @@
         
         .pyramid { width:140px; height:140px; background: var(--world-grey); }
         .pyramid::before { content: "PYRAMID"; }
+        
         .stronghold { width:100px; height:100px; background: var(--world-grey); }
         .stronghold::before { content: "STRONGHOLD"; }
+        
         .oasis { width:100px; height:100px; background: var(--world-grey); }
         .oasis::before { content: "OASIS"; }
 
@@ -179,7 +181,6 @@
             gd.appendChild(dv); 
             if (s) { 
                 saveState(); 
-                // Linjen herunder er fjernet, så teksten ikke bliver slettet!
                 // document.getElementById('pIn').value = ""; 
             }
         }
