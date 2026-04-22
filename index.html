@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Persistent Text (Fixed Special Labels)</title>
+    <title>Dark War - Clean Specials</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -73,9 +73,9 @@
         <div class="row">
             <button onclick="undo()">↩️</button>
             <button onclick="redo()">↪️</button>
-            <button onclick="addSpecial('pyramid', 'PYR')">🏜️ Pyr</button>
-            <button onclick="addSpecial('stronghold', 'STR')">🏰 Str</button>
-            <button onclick="addSpecial('oasis', 'OAS')">💧 Oas</button>
+            <button onclick="addSpecial('pyramid')">🏜️ Pyr</button>
+            <button onclick="addSpecial('stronghold')">🏰 Str</button>
+            <button onclick="addSpecial('oasis')">💧 Oas</button>
             <input type="text" id="pIn" placeholder="Navn..." style="width:75px">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
             <button onclick="clearAll()" style="background:#c0392b">Clear</button>
@@ -159,7 +159,7 @@
             return false;
         }
 
-        function addSpecial(type, name) { addI({ n: name, t: type, c: "#454d55", l: null, top: null }); }
+        function addSpecial(type) { addI({ n: "", t: type, c: "#454d55", l: null, top: null }); }
 
         function addI(d = null, s = true) {
             const type = d ? d.t : curType;
@@ -179,10 +179,7 @@
             makeD(dv);
             let lt = 0; dv.addEventListener('touchend', () => { if(Date.now() - lt < 300) openM(dv); lt = Date.now(); });
             gd.appendChild(dv); 
-            if (s) { 
-                saveState(); 
-                // document.getElementById('pIn').value = ""; 
-            }
+            if (s) { saveState(); }
         }
 
         function makeD(el) {
