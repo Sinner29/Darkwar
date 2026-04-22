@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dark War - Oasis Resize</title>
+    <title>Dark War - Clean Export Style</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <style>
         :root { 
@@ -70,12 +70,12 @@
         <div class="row">
             <button onclick="undo()">↩️</button>
             <button onclick="redo()">↪️</button>
-            <button onclick="addSpecial('pyramid', '')">🏜️ Pyr</button>
-            <button onclick="addSpecial('stronghold', '')">🏰 Str</button>
-            <button onclick="addSpecial('oasis', '')">💧 Oas</button>
-            <button onclick="addSpecial('shelter', '', '#0a3d59')" style="background:#0a3d59">🏠 B</button>
-            <button onclick="addSpecial('shelter', '', '#8a4500')" style="background:#8a4500">🏠 O</button>
-            <input type="text" id="pIn" placeholder="Label..." style="width:60px">
+            <button onclick="addSpecial('pyramid', 'PYR')">🏜️ Pyr</button>
+            <button onclick="addSpecial('stronghold', 'STR')">🏰 Str</button>
+            <button onclick="addSpecial('oasis', 'OAS')">💧 Oas</button>
+            <button onclick="addSpecial('shelter', '', '#0a3d59')" style="background:#0a3d59">🏠</button>
+            <button onclick="addSpecial('shelter', '', '#8a4500')" style="background:#8a4500">🏠</button>
+            <input type="text" id="pIn" placeholder="Navn..." style="width:60px">
             <button onclick="addI()" style="background:#e74c3c">✚ Add</button>
             <button onclick="clearAll()" style="background:#c0392b">Clear</button>
         </div>
@@ -98,6 +98,43 @@
 
         function updateTransform() { zl.style.transform = `translate(${px}px, ${py}px) scale(${sc})`; }
 
+        const getLet = (x) => String.fromCharCode(65 + Math.floor(x / 200));
+
+        async function exportMap() {
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => {
+                const x = parseInt(el.style.left);
+                const y = parseInt(el.style.top);
+                const label = el.innerText || "";
+                return `${getLet(x)}${Math.round(x/20)},${Math.round(y/20)},${label}`;
+            });
+            const code = data.join(';');
+            await navigator.clipboard.writeText(code);
+            alert("Kort Hive-kode kopieret!");
+        }
+
+        function importMap() {
+            const code = prompt("Indsæt Hive-kode:");
+            if (!code) return;
+            try {
+                gd.innerHTML = "";
+                code.split(';').forEach(item => {
+                    const p = item.split(',');
+                    if (p.length < 3) return;
+                    const x = parseInt(p[0].replace(/^\D+/g, '')) * 20;
+                    const y = parseInt(p[1]) * 20;
+                    const name = p[2];
+                    
+                    let type = 'port';
+                    if(name.includes('PYR')) type = 'pyramid';
+                    else if(name.includes('STR')) type = 'stronghold';
+                    else if(name.includes('OAS')) type = 'oasis';
+                    
+                    addI({ n: name, t: type, c: curColor, l: x, top: y }, false);
+                });
+                saveState();
+            } catch (e) { alert("Fejl i kodeformat!"); }
+        }
+
         function isBlocked(x, y, type) {
             if (type === 'zone') return false;
             const sizeMap = { 'port': 40, 'shelter': 60, 'pyramid': 140, 'stronghold': 100, 'oasis': 100, 'tile-blue': 20, 'tile-orange': 20 };
@@ -109,35 +146,6 @@
                 }
             }
             return false;
-        }
-
-        // OPTIMERET EKSPORT (MEGET KORTERE)
-        async function exportMap() {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => [
-                el.innerText, 
-                el.dataset.t, 
-                el.style.backgroundColor, 
-                parseInt(el.style.left), 
-                parseInt(el.style.top)
-            ]);
-            const code = btoa(JSON.stringify(data));
-            await navigator.clipboard.writeText(code);
-            alert("Kortere eksport-kode kopieret!");
-        }
-
-        function importMap() {
-            const code = prompt("Indsæt din korte kode:");
-            if (!code) return;
-            try {
-                const decoded = JSON.parse(atob(code));
-                gd.innerHTML = "";
-                decoded.forEach(i => {
-                    // Håndterer både det gamle og det nye korte format
-                    const item = Array.isArray(i) ? { n: i[0], t: i[1], c: i[2], l: i[3], top: i[4] } : { n: i.n, t: i.t, c: i.c, l: i.l, top: i.top };
-                    addI(item, false);
-                });
-                saveState();
-            } catch (e) { alert("Ugyldig kode!"); }
         }
 
         const hm = new Hammer(vp);
