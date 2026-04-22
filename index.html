@@ -45,7 +45,6 @@
         .pyramid::before { content: "PYRAMID"; }
         .stronghold { width:100px; height:100px; background: var(--world-grey); }
         .stronghold::before { content: "STRONGHOLD"; }
-        /* Oasis nu rettet til 100px (25 tiles) */
         .oasis { width:100px; height:100px; background: var(--world-grey); }
         .oasis::before { content: "OASIS"; }
 
@@ -112,24 +111,33 @@
             return false;
         }
 
+        // OPTIMERET EKSPORT (MEGET KORTERE)
         async function exportMap() {
-            const data = Array.from(document.querySelectorAll('.obj')).map(el => ({
-                n: el.innerText, t: el.dataset.t, c: el.style.backgroundColor, x: parseInt(el.style.left), y: parseInt(el.style.top)
-            }));
+            const data = Array.from(document.querySelectorAll('.obj')).map(el => [
+                el.innerText, 
+                el.dataset.t, 
+                el.style.backgroundColor, 
+                parseInt(el.style.left), 
+                parseInt(el.style.top)
+            ]);
             const code = btoa(JSON.stringify(data));
             await navigator.clipboard.writeText(code);
-            alert("Export code copied to clipboard!");
+            alert("Kortere eksport-kode kopieret!");
         }
 
         function importMap() {
-            const code = prompt("Paste your export code here:");
+            const code = prompt("Indsæt din korte kode:");
             if (!code) return;
             try {
                 const decoded = JSON.parse(atob(code));
                 gd.innerHTML = "";
-                decoded.forEach(i => addI({ n: i.n, t: i.t, c: i.c, l: i.x, top: i.y }, false));
+                decoded.forEach(i => {
+                    // Håndterer både det gamle og det nye korte format
+                    const item = Array.isArray(i) ? { n: i[0], t: i[1], c: i[2], l: i[3], top: i[4] } : { n: i.n, t: i.t, c: i.c, l: i.l, top: i.top };
+                    addI(item, false);
+                });
                 saveState();
-            } catch (e) { alert("Invalid code!"); }
+            } catch (e) { alert("Ugyldig kode!"); }
         }
 
         const hm = new Hammer(vp);
